@@ -1,14 +1,30 @@
 """
 Advanced Feature Engineering for Inflation Forecasting
-Creates stationary features from raw macroeconomic data for improved model performance.
+Creates additional features from FRED-MD transformed macroeconomic data.
 
-This module provides comprehensive feature transformations including:
-- Basic transformations (pct_change, diff, log_diff, yoy, qoq)
+===================================================================================
+IMPORTANT: DATA PIPELINE
+===================================================================================
+
+This module is designed to work with data that has ALREADY undergone FRED-MD 
+stationarity transformations via fred_md_loader.py:
+
+    Raw FRED-MD (2025-11-MD.csv) 
+        --> fred_md_loader.py (applies transformation codes 1-7)
+        --> feature_engineering.py (applies ADDITIONAL features)
+
+The FRED-MD stationarity transformations (pct_change, diff, log_diff, etc.) are 
+applied by fred_md_loader.py based on the transformation codes in the data file.
+
+This module then applies ADDITIONAL feature engineering:
 - Rolling statistics (mean, std, max, min)
 - Momentum features (rate of change, acceleration)
-- Volatility features
+- Volatility features  
 - Z-score and outlier detection
 - Cross-sectional features (spreads, ratios)
+
+DO NOT apply basic transforms (pct_change, diff) here - that would double-transform!
+===================================================================================
 
 Compatible with existing Naghiayik project structure.
 """
@@ -444,40 +460,57 @@ class StationaryFeatureEngineer:
             return np.column_stack(transforms)
         return np.array([]).reshape(n_obs, 0)
     
-    def get_all_features(self, Y, include_raw=False):
+    def get_all_features(self, Y, include_raw=True, skip_basic_transforms=True):
         """
         Apply all feature engineering transformations.
         
         Parameters:
         -----------
         Y : np.ndarray
-            Raw data matrix
+            Data matrix (should already be FRED-MD transformed via fred_md_loader)
         include_raw : bool
-            Whether to include raw features (default: False)
+            Whether to include original features (default: True)
+        skip_basic_transforms : bool
+            Whether to skip basic transforms like pct_change/diff (default: True).
+            Set to True when data has already undergone FRED-MD stationarity transforms.
+            Set to False only for truly raw data that needs basic transforms.
         
         Returns:
         --------
         np.ndarray : All engineered features
+        
+        Note:
+        -----
+        When using data from fred_md_loader.py or rawdata.csv (already transformed),
+        always use skip_basic_transforms=True to avoid double-transformation.
         """
         Y = np.array(Y)
         n_obs = Y.shape[0]
         
-        # Apply all transformations
-        basic = self.apply_basic_transforms(Y)
+        # Apply transformations
+        feature_sets = []
+        
+        # Only apply basic transforms if explicitly requested (for raw data only)
+        if not skip_basic_transforms:
+            print("Warning: Applying basic transforms. Make sure data is NOT already transformed!")
+            basic = self.apply_basic_transforms(Y)
+            if basic.shape[1] > 0:
+                feature_sets.append(basic)
+        
+        # These transforms are always safe to apply on transformed data
         rolling = self.apply_rolling_statistics(Y)
         momentum = self.apply_momentum_features(Y)
         volatility = self.apply_volatility_features(Y)
         zscore = self.apply_zscore_features(Y)
         cross = self.apply_cross_sectional_features(Y)
         
-        # Combine all features
-        feature_sets = [basic, rolling, momentum, volatility, zscore, cross]
+        # Combine all additional features
+        for f in [rolling, momentum, volatility, zscore, cross]:
+            if f.shape[1] > 0:
+                feature_sets.append(f)
         
         if include_raw:
             feature_sets.insert(0, Y)
-        
-        # Filter out empty arrays
-        feature_sets = [f for f in feature_sets if f.shape[1] > 0]
         
         if feature_sets:
             all_features = np.hstack(feature_sets)
@@ -496,7 +529,7 @@ class StationaryFeatureEngineer:
         """Get summary of created features."""
         return {
             'n_transformed_features': getattr(self, 'n_transformed_features', 0),
-            'feature_types': ['basic', 'rolling', 'momentum', 'volatility', 'zscore', 'cross_sectional']
+            'feature_types': ['rolling', 'momentum', 'volatility', 'zscore', 'cross_sectional']
         }
 
 
@@ -504,25 +537,30 @@ class StationaryFeatureEngineer:
 # Integration Functions for Existing Models
 # =============================================================================
 
-def engineer_features_for_model(Y, include_raw=True, handle_nan='fill'):
+def engineer_features_for_model(Y, include_raw=True, handle_nan='fill', skip_basic_transforms=True):
     """
     Convenience function to engineer features for model training.
+    
+    This function assumes data has already been transformed via fred_md_loader.py
+    or is from the existing rawdata.csv (pre-transformed).
     
     Parameters:
     -----------
     Y : np.ndarray
-        Raw data matrix
+        Data matrix (should be FRED-MD transformed)
     include_raw : bool
-        Whether to include original features
+        Whether to include original features (default: True)
     handle_nan : str
         How to handle NaN values: 'fill' (mean), 'drop', or 'keep'
+    skip_basic_transforms : bool
+        Skip basic transforms since data is already transformed (default: True)
     
     Returns:
     --------
     np.ndarray : Engineered features ready for modeling
     """
     fe = StationaryFeatureEngineer()
-    features = fe.get_all_features(Y, include_raw=include_raw)
+    features = fe.get_all_features(Y, include_raw=include_raw, skip_basic_transforms=skip_basic_transforms)
     
     if handle_nan == 'fill':
         # Fill NaN with column mean
@@ -539,18 +577,20 @@ def engineer_features_for_model(Y, include_raw=True, handle_nan='fill'):
     return features
 
 
-def apply_feature_engineering_to_rolling_window(Y_train, Y_test_row, include_raw=True):
+def apply_feature_engineering_to_rolling_window(Y_train, Y_test_row, include_raw=True, skip_basic_transforms=True):
     """
     Apply feature engineering in a rolling window context.
     
     Parameters:
     -----------
     Y_train : np.ndarray
-        Training data matrix
+        Training data matrix (FRED-MD transformed)
     Y_test_row : np.ndarray
         Single test observation (1D array)
     include_raw : bool
         Whether to include original features
+    skip_basic_transforms : bool
+        Skip basic transforms since data is already transformed (default: True)
     
     Returns:
     --------
@@ -561,8 +601,9 @@ def apply_feature_engineering_to_rolling_window(Y_train, Y_test_row, include_raw
     # Combine for consistent transformation
     Y_combined = np.vstack([Y_train, Y_test_row.reshape(1, -1)])
     
-    # Engineer features
-    features_combined = fe.get_all_features(Y_combined, include_raw=include_raw)
+    # Engineer features (skip basic transforms by default)
+    features_combined = fe.get_all_features(Y_combined, include_raw=include_raw, 
+                                            skip_basic_transforms=skip_basic_transforms)
     
     # Handle NaN
     col_means = np.nanmean(features_combined[:-1], axis=0)  # Mean from train only

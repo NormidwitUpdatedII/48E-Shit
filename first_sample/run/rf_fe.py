@@ -1,11 +1,16 @@
 """
-Random Forest with Feature Engineering - Example Run Script
-Demonstrates how to integrate feature engineering with existing models.
+Random Forest with Feature Engineering - Run Script
 
-This script shows improved forecasting using:
-1. Advanced feature engineering (momentum, volatility, z-scores)
-2. Feature selection and preprocessing
-3. Random Forest with optimized parameters
+This script uses:
+1. FRED-MD transformed data (stationarity transforms already applied)
+2. Additional feature engineering (momentum, volatility, z-scores)
+3. Feature selection and preprocessing
+4. Random Forest with optimized parameters
+
+DATA PIPELINE:
+    Raw FRED-MD --> fred_md_loader.py (stationarity) --> feature_engineering.py (additional FE)
+    
+NOTE: Since rawdata.csv is already transformed, we use skip_basic_transforms=True
 """
 import os
 import sys
@@ -54,7 +59,7 @@ def run_rf_fe(Y, indice, lag):
     Parameters:
     -----------
     Y : np.ndarray
-        Input data matrix
+        Input data matrix (already FRED-MD transformed)
     indice : int
         Column index of target variable (1-indexed)
     lag : int
@@ -67,9 +72,10 @@ def run_rf_fe(Y, indice, lag):
     indice = indice - 1  # Convert to 0-indexed
     Y = np.array(Y)
     
-    # Apply feature engineering to raw data
+    # Apply feature engineering to already-transformed data
+    # IMPORTANT: skip_basic_transforms=True because data is already transformed
     fe = StationaryFeatureEngineer()
-    Y_engineered = fe.get_all_features(Y, include_raw=True)
+    Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
     
     # Handle NaN values
     Y_engineered = handle_missing_values(Y_engineered, strategy='mean')

@@ -1,11 +1,10 @@
 """
-XGBoost with Feature Engineering - Example Run Script
-Demonstrates improved XGBoost forecasting using advanced feature engineering.
+XGBoost with Feature Engineering - Run Script
 
-Features:
-1. Momentum, volatility, and z-score transformations
-2. Feature selection and preprocessing
-3. Optimized XGBoost parameters
+DATA PIPELINE:
+    Raw FRED-MD --> fred_md_loader.py (stationarity) --> feature_engineering.py (additional FE)
+    
+NOTE: Since rawdata.csv is already transformed, we use skip_basic_transforms=True
 """
 import os
 import sys
@@ -73,9 +72,9 @@ def run_xgb_fe(Y, indice, lag):
     indice = indice - 1  # Convert to 0-indexed
     Y = np.array(Y)
     
-    # Apply feature engineering
+    # Apply feature engineering (skip basic transforms - data already transformed)
     fe = StationaryFeatureEngineer()
-    Y_engineered = fe.get_all_features(Y, include_raw=True)
+    Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
     
     # Handle NaN values
     Y_engineered = handle_missing_values(Y_engineered, strategy='mean')
