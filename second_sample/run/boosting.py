@@ -12,11 +12,12 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
-from utils import \1, add_outlier_dummynd_sample.functions.func_boosting import boosting_rolling_window
+from utils import load_csv, save_forecasts, add_outlier_dummy
+from second_sample.functions.func_boosting import boosting_rolling_window
 
 
 def main():
-    \1
+    Y = load_csv(DATA_PATH)
     
     # Add dummy variable for outliers (COVID period) as in the R code
     Y = add_outlier_dummy(Y, target_col=0)

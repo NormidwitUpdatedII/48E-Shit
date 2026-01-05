@@ -16,7 +16,7 @@ DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 from second_sample.functions.func_adalassorf import lasso_rolling_window
-from utils import \1, add_outlier_dummy
+from utils import load_csv, save_forecasts, add_outlier_dummy
 
 def main():
     # Load data
