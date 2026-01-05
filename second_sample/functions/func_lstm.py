@@ -11,6 +11,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors, plot_forecast
 
 try:
@@ -24,6 +25,9 @@ except ImportError:
     KERAS_AVAILABLE = False
     print("Warning: TensorFlow/Keras not available. Install with: pip install tensorflow")
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def run_lstm(Y, indice, lag, lstm_units=50, dropout_rate=0.2):
     """

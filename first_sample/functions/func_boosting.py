@@ -8,8 +8,12 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors, plot_forecast
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def boosting(y, X, v=0.2, max_iter=1000, tol=1e-6):
     """

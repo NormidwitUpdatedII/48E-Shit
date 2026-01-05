@@ -9,9 +9,13 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors, plot_forecast
 from .func_fact import run_fact
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def baggit_pretest(X, y, fixed_controls=None, significance=0.1):
     """

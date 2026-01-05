@@ -8,8 +8,12 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors, plot_forecast
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def run_rf(Y, indice, lag):
     """
@@ -86,21 +90,27 @@ def rf_rolling_window(Y, nprev, indice=1, lag=1):
     dict : Dictionary with 'pred', 'errors', and 'save_importance'
     """
     Y = np.array(Y)
-    save_importance = []
-    save_pred = np.full((nprev, 1), np.nan)
-    
-    for i in range(nprev, 0, -1):
-        # Window selection
+    def process_single_iteration(i, Y, nprev, indice, lag):
+        """Process a single iteration - designed for parallel execution."""
         Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-        
-        # Run RF model
         result = run_rf(Y_window, indice, lag)
-        
         idx = nprev - i
-        save_pred[idx, 0] = result['pred']
-        save_importance.append(result['model'].feature_importances_)
-        
-        print(f"iteration {idx + 1}")
+        return idx, result['pred'], result['model'].feature_importances_
+    
+    print(f"Running {nprev} RF iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    # Parallel execution
+    results = Parallel(n_jobs=N_JOBS, verbose=10)(
+        delayed(process_single_iteration)(i, Y, nprev, indice, lag)
+        for i in range(nprev, 0, -1)
+    )
+    
+    # Collect results
+    save_pred = np.full((nprev, 1), np.nan)
+    save_importance = [None] * nprev
+    for idx, pred, importance in results:
+        save_pred[idx, 0] = pred
+        save_importance[idx] = importance
     
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed

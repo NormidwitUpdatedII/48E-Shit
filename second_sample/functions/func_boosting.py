@@ -10,8 +10,12 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def boosting(X, y, max_iter=100, nu=0.1):
     """L2 Boosting algorithm."""

@@ -14,6 +14,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors
 
 
@@ -76,6 +77,9 @@ class ICGlmnet:
         """Predict using fitted model."""
         return self.coef_[0] + X @ self.coef_[1:]
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def run_lasso(Y, indice, lag, alpha=1, type_='lasso'):
     """

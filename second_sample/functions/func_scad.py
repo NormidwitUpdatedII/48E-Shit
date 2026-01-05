@@ -11,6 +11,7 @@ import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors
 
 
@@ -78,6 +79,9 @@ class SCADRegressor:
         """Predict using fitted model."""
         return self.intercept_ + X @ self.coef_
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def run_scad(Y, indice, lag, lambda_=0.1):
     """

@@ -9,8 +9,12 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors, plot_forecast
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def csr(X, y, fixed_controls=None, k_max=None):
     """
@@ -205,19 +209,25 @@ def csr_rolling_window(Y, nprev, indice=1, lag=1):
     dict : Dictionary with 'pred' and 'errors'
     """
     Y = np.array(Y)
-    save_pred = np.full((nprev, 1), np.nan)
-    
-    for i in range(nprev, 0, -1):
-        # Window selection
+    def process_single_iteration(i, Y, nprev, indice, lag):
+        """Process a single iteration - designed for parallel execution."""
         Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-        
-        # Run CSR model
         result = run_csr(Y_window, indice, lag)
-        
         idx = nprev - i
-        save_pred[idx, 0] = result['pred']
-        
-        print(f"iteration {idx + 1}")
+        return idx, result['pred']
+    
+    print(f"Running {nprev} CSR iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    # Parallel execution
+    results = Parallel(n_jobs=N_JOBS, verbose=10)(
+        delayed(process_single_iteration)(i, Y, nprev, indice, lag)
+        for i in range(nprev, 0, -1)
+    )
+    
+    # Collect results
+    save_pred = np.full((nprev, 1), np.nan)
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
     
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed

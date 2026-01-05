@@ -11,6 +11,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors, plot_forecast
 
 try:
@@ -23,6 +24,9 @@ except ImportError:
     KERAS_AVAILABLE = False
     print("Warning: TensorFlow/Keras not available. Install with: pip install tensorflow")
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def run_nn(Y, indice, lag):
     """
@@ -137,19 +141,25 @@ def nn_rolling_window(Y, nprev, indice=1, lag=1):
         raise ImportError("TensorFlow/Keras is required for neural network models")
     
     Y = np.array(Y)
-    save_pred = np.full((nprev, 1), np.nan)
-    
-    for i in range(nprev, 0, -1):
-        # Window selection
+    def process_single_iteration(i, Y, nprev, indice, lag):
+        """Process a single iteration - designed for parallel execution."""
         Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-        
-        # Run NN model
         result = run_nn(Y_window, indice, lag)
-        
         idx = nprev - i
-        save_pred[idx, 0] = result['pred']
-        
-        print(f"iteration {idx + 1}")
+        return idx, result['pred']
+    
+    print(f"Running {nprev} NN iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    # Parallel execution
+    results = Parallel(n_jobs=N_JOBS, verbose=10)(
+        delayed(process_single_iteration)(i, Y, nprev, indice, lag)
+        for i in range(nprev, 0, -1)
+    )
+    
+    # Collect results
+    save_pred = np.full((nprev, 1), np.nan)
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
     
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed

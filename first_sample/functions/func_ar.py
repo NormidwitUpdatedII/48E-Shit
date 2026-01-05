@@ -7,8 +7,12 @@ from sklearn.linear_model import LinearRegression
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from joblib import Parallel, delayed
 from utils import embed, calculate_errors, plot_forecast
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 def run_ar(Y, indice, lag, model_type="fixed"):
     """
