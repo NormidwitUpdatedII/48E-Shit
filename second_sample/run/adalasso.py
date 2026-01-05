@@ -1,0 +1,66 @@
+"""
+Adaptive LASSO forecasting run script for second sample
+Runs adaptive LASSO with dummy variable for all lags and both indices
+"""
+import sys
+import os
+import numpy as np
+import pandas as pd
+
+# Add parent directories to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+# Path constants for absolute paths
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata.csv')
+FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
+
+from second_sample.functions.func_lasso import lasso_rolling_window
+from utils import load_csv, save_forecasts
+
+def main():
+    # Load data
+    Y = load_csv(DATA_PATH)
+    
+    # Add dummy variable (1 at minimum of first column)
+    dum = np.zeros(Y.shape[0])
+    dum[np.argmin(Y[:, 0])] = 1
+    Y = np.column_stack([Y, dum])
+    
+    nprev = 300
+    alpha = 1  # LASSO
+    
+    print("Running Adaptive LASSO forecasts (second sample with dummy)...")
+    
+    # Storage for results
+    cpi_results = []
+    pce_results = []
+    
+    # Run for each lag
+    for lag in range(1, 13):
+        print(f"  Lag {lag}/12...")
+        
+        # CPI (indice=1)
+        result_cpi = lasso_rolling_window(Y, nprev, indice=1, lag=lag, 
+                                          alpha=alpha, type_='adalasso')
+        cpi_results.append(result_cpi['predictions'])
+        
+        # PCE (indice=2)
+        result_pce = lasso_rolling_window(Y, nprev, indice=2, lag=lag,
+                                          alpha=alpha, type_='adalasso')
+        pce_results.append(result_pce['predictions'])
+    
+    # Combine results
+    cpi = np.column_stack(cpi_results)
+    pce = np.column_stack(pce_results)
+    
+    # Save forecasts
+    os.makedirs(FORECAST_DIR, exist_ok=True)
+    
+    save_forecasts(cpi, os.path.join(FORECAST_DIR, 'adalasso-cpi.csv'))
+    save_forecasts(pce, os.path.join(FORECAST_DIR, 'adalasso-pce.csv'))
+    
+    print(f"Adaptive LASSO forecasts saved to {FORECAST_DIR}")
+
+if __name__ == "__main__":
+    main()
