@@ -54,8 +54,8 @@ def run_nn(Y, indice, lag):
         dum = Y[:, -1]
         Y = Y[:, :-1]
     
-    # Compute PCA scores
-    scores = compute_pca_scores(Y, n_components=4, scale=False)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    scores, _ = compute_pca_scores(Y, n_components=4, scale=False)
     
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y, scores])

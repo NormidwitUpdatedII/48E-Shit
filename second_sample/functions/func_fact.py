@@ -29,7 +29,8 @@ def run_fact(Y, indice, lag, n_factors=4):
     
     # Get target variable and factors
     y_target = Y_main[:, indice - 1]
-    pca_scores = compute_pca_scores(Y_main)[:, :n_factors]
+    pca_scores, _ = compute_pca_scores(Y_main)
+    pca_scores = pca_scores[:, :n_factors]
     
     # Combine target with factors
     Y2 = np.column_stack([y_target, pca_scores])

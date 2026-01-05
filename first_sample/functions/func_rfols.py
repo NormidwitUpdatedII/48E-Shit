@@ -40,8 +40,8 @@ def run_rfols(Y, indice, lag):
     if Y.shape[1] > 2:
         Y = Y[:, :-1]
     
-    # Compute PCA scores
-    scores = compute_pca_scores(Y, n_components=4, scale=False)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    scores, _ = compute_pca_scores(Y, n_components=4, scale=False)
     
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y, scores])

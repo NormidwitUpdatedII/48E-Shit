@@ -138,8 +138,8 @@ def prepare_forecast_data(Y, indice, lag, n_pca_components=4):
     """
     Y = np.array(Y)
     
-    # Compute PCA scores
-    scores = compute_pca_scores(Y, n_components=n_pca_components, scale=False)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    scores, _ = compute_pca_scores(Y, n_components=n_pca_components, scale=False)
     
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y, scores])

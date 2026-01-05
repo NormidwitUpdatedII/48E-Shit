@@ -88,8 +88,9 @@ def run_rflasso(Y, indice, lag):
     dummy = Y[:(n_obs - lag + 1), -1]
     Y_main = Y[:, :-1]
     
-    # Compute PCA scores (first 4 components)
-    pca_scores = compute_pca_scores(Y_main)[:, :4]
+    # Compute PCA scores (first 4 components) - returns tuple: scores, Y_filled
+    pca_scores, _ = compute_pca_scores(Y_main)
+    pca_scores = pca_scores[:, :4]
     
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y_main, pca_scores])

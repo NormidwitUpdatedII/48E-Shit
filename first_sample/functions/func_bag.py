@@ -95,8 +95,8 @@ def run_bagg(Y, indice, lag, R=100, l=5):
 
     Y = np.array(Y)
 
-    # Compute PCA scores
-    scores = compute_pca_scores(Y, n_components=4, scale=False)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    scores, _ = compute_pca_scores(Y, n_components=4, scale=False)
 
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y, scores])

@@ -33,8 +33,8 @@ def run_fact(Y, indice, lag):
     
     Y = np.array(Y)
     
-    # Compute PCA scores
-    scores = compute_pca_scores(Y, n_components=4, scale=False)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    scores, _ = compute_pca_scores(Y, n_components=4, scale=False)
     
     # Combine target with PCA scores
     Y2 = np.column_stack([Y[:, indice].reshape(-1, 1), scores])

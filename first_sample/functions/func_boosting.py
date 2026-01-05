@@ -93,8 +93,8 @@ def run_boost(Y, indice, lag):
     
     Y = np.array(Y)
     
-    # Compute PCA scores (using 8 components as in R code)
-    scores = compute_pca_scores(Y, n_components=8, scale=False)
+    # Compute PCA scores (using 8 components as in R code, returns tuple)
+    scores, _ = compute_pca_scores(Y, n_components=8, scale=False)
     
     # Combine target with PCA scores
     Y2 = np.column_stack([Y[:, indice].reshape(-1, 1), scores])

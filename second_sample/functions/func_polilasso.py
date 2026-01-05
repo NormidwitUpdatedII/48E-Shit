@@ -27,7 +27,8 @@ def run_polilasso(Y, indice, lag, degree=2):
     else:
         Y_main = Y
     
-    pca_scores = compute_pca_scores(Y_main)[:, :4]
+    pca_scores, _ = compute_pca_scores(Y_main)
+    pca_scores = pca_scores[:, :4]
     Y2 = np.column_stack([Y_main, pca_scores])
     
     aux = embed(Y2, 4 + lag)

@@ -44,7 +44,9 @@ class ICGlmnet:
             if self.alpha == 1:
                 model = LassoCV(cv=self.cv_folds, max_iter=10000)
             elif self.alpha == 0:
-                model = RidgeCV(cv=self.cv_folds)
+                # RidgeCV needs alphas parameter for proper CV
+                alphas = np.logspace(-6, 6, 100)
+                model = RidgeCV(alphas=alphas, cv=self.cv_folds)
             else:
                 model = ElasticNetCV(l1_ratio=self.alpha, cv=self.cv_folds, max_iter=10000)
             
@@ -108,8 +110,8 @@ def run_lasso(Y, indice, lag, alpha=1, type_='lasso'):
         dummy = None
         Y_main = Y
     
-    # Compute PCA scores
-    pca_scores = compute_pca_scores(Y_main)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    pca_scores, _ = compute_pca_scores(Y_main)
     
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y_main[:, indice - 1], pca_scores])
@@ -239,7 +241,8 @@ def run_pols(Y, indice, lag, coef):
         dummy = None
         Y_main = Y
     
-    pca_scores = compute_pca_scores(Y_main)[:, :4]
+    pca_scores, _ = compute_pca_scores(Y_main)
+    pca_scores = pca_scores[:, :4]  # Take only first 4 components
     Y2 = np.column_stack([Y_main, pca_scores])
     
     aux = embed(Y2, 4 + lag)

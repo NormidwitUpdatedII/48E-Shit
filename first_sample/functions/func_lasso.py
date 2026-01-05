@@ -45,11 +45,17 @@ class ICGlmnet:
         self.scaler = StandardScaler()
         X_scaled = self.scaler.fit_transform(X)
         
+        # Handle near-zero variance features
+        scale = self.scaler.scale_.copy()
+        scale[scale < 1e-10] = 1.0  # Prevent division by zero
+        
         # Use cross-validation to get lambda path
         if self.alpha == 1.0:
             model = LassoCV(cv=5, max_iter=10000, random_state=42)
         elif self.alpha == 0.0:
-            model = RidgeCV(cv=5)
+            # RidgeCV needs alphas parameter, not just cv
+            alphas = np.logspace(-6, 6, 100)
+            model = RidgeCV(alphas=alphas, cv=5)
         else:
             model = ElasticNetCV(l1_ratio=self.alpha, cv=5, max_iter=10000, random_state=42)
         
@@ -68,7 +74,7 @@ class ICGlmnet:
                 coef_adjusted = model.coef_
         else:
             model.fit(X_scaled, y)
-            coef_adjusted = model.coef_ / self.scaler.scale_ if hasattr(self.scaler, 'scale_') else model.coef_
+            coef_adjusted = model.coef_ / scale
         
         # Store coefficients (unscaled)
         self.coef_ = coef_adjusted
@@ -126,8 +132,8 @@ def run_lasso(Y, indice, lag, alpha=1.0, model_type="lasso"):
     
     Y = np.array(Y)
     
-    # Compute PCA scores
-    scores = compute_pca_scores(Y, n_components=4, scale=False)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    scores, _ = compute_pca_scores(Y, n_components=4, scale=False)
     
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y, scores])
@@ -211,8 +217,8 @@ def run_pols(Y, indice, lag, coef):
     
     Y = np.array(Y)
     
-    # Compute PCA scores
-    scores = compute_pca_scores(Y, n_components=4, scale=False)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    scores, _ = compute_pca_scores(Y, n_components=4, scale=False)
     
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y, scores])

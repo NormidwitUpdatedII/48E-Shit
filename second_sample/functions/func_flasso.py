@@ -129,8 +129,8 @@ def run_flasso(Y, indice, lag, alpha=1, type_='lasso'):
     dummy = Y[:(n_obs - lag + 1), -1]
     Y_main = Y[:, :-1]
     
-    # Compute PCA scores
-    pca_scores = compute_pca_scores(Y_main)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    pca_scores, _ = compute_pca_scores(Y_main)
     
     # Combine original data with PCA scores
     Y2 = np.column_stack([Y_main[:, indice - 1], pca_scores])
@@ -294,8 +294,8 @@ def run_pols_dummy(Y, indice, lag, coef):
     dummy = Y[:, -1]
     Y_main = Y[:, :-1]
     
-    # Compute PCA scores
-    pca_scores = compute_pca_scores(Y_main)
+    # Compute PCA scores (returns tuple: scores, Y_filled)
+    pca_scores, _ = compute_pca_scores(Y_main)
     
     # Combine with first 4 components
     Y2 = np.column_stack([Y_main, pca_scores[:, :4]])
