@@ -16,18 +16,16 @@ DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 from second_sample.functions.func_adalassorf import lasso_rolling_window
-from utils import load_csv, save_forecasts
+from utils import \1, add_outlier_dummy
 
 def main():
     # Load data
     Y = load_csv(DATA_PATH)
     
-    # Add dummy variable (1 at minimum of first column)
-    dum = np.zeros(Y.shape[0])
-    dum[np.argmin(Y[:, 0])] = 1
-    Y = np.column_stack([Y, dum])
+    # Add dummy variable for outliers (COVID period) as in the R code
+    Y = add_outlier_dummy(Y, target_col=0)
     
-    nprev = 300
+    nprev = 180  # Paper specification for second sample
     
     print("Running AdaLASSO+RF forecasts (second sample with dummy)...")
     

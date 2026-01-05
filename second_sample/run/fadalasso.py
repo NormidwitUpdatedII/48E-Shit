@@ -14,7 +14,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
-from utils import load_csv, save_forecasts
+from utils import \1, add_outlier_dummy
 from second_sample.functions.func_flasso import flasso_rolling_window, pols_dummy_rolling_window
 
 
@@ -22,7 +22,7 @@ def main():
     # Load data
     Y = load_csv(DATA_PATH)
     
-    nprev = 300
+    nprev = 180  # Paper specification for second sample
     alpha = 1
     
     results = {}

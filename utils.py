@@ -236,7 +236,7 @@ def save_forecasts(data, filepath, sep=";"):
     df.to_csv(filepath, sep=sep, header=False, index=False)
 
 
-def load_csv(filepath, sep=",", header=0):
+def load_csv(filepath, sep=",", header=None):
     """
     Load prepared data from CSV file.
     
@@ -255,3 +255,44 @@ def load_csv(filepath, sep=",", header=0):
     """
     df = pd.read_csv(filepath, sep=sep, header=header)
     return df.values
+
+
+def add_outlier_dummy(Y, target_col=0):
+    """
+    Add dummy variable for outliers (second sample methodology).
+    Creates a dummy variable that equals 1 at the minimum value of the target column.
+    
+    This is used in the second sample to handle the COVID-19 outlier in inflation data,
+    as described in the paper methodology.
+    
+    Parameters:
+    -----------
+    Y : ndarray
+        Input data matrix
+    target_col : int
+        Column index to find the minimum value (0-indexed, default is column 1/CPI)
+    
+    Returns:
+    --------
+    Y_with_dummy : ndarray
+        Data matrix with appended dummy column
+    
+    Example:
+    --------
+    >>> Y = load_csv('rawdata.csv')
+    >>> Y = add_outlier_dummy(Y, target_col=0)  # CPI is column 0 (1 in R indexing)
+    """
+    Y = np.array(Y)
+    n_rows = Y.shape[0]
+    
+    # Create dummy variable (all zeros)
+    dum = np.zeros(n_rows)
+    
+    # Set 1 at the index of minimum value in target column
+    min_idx = np.argmin(Y[:, target_col])
+    dum[min_idx] = 1
+    
+    # Append dummy column to data
+    Y_with_dummy = np.column_stack([Y, dum])
+    
+    return Y_with_dummy

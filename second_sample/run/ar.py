@@ -14,7 +14,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
-from utils import load_csv, save_forecasts
+from utils import load_csv, save_forecasts, add_outlier_dummy
 from second_sample.functions.func_ar import ar_rolling_window
 
 
@@ -22,7 +22,11 @@ def main():
     # Load data
     Y = load_csv(DATA_PATH)
     
-    nprev = 300
+    # Add dummy variable for outliers (COVID period) as in the R code
+    # dum[which.min(Y[,1])]=1  # Creates dummy at minimum CPI value
+    Y = add_outlier_dummy(Y, target_col=0)
+    
+    nprev = 180  # Paper specification for second sample
     
     results = {}
     
