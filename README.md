@@ -7,9 +7,11 @@ A comprehensive Python implementation of the R codebase from **"Forecasting Infl
 This repository contains Python implementations of various machine learning and econometric methods for inflation forecasting using rolling window evaluation. The original R code has been faithfully converted to Python while maintaining the same structure and methodology.
 
 ### Key Features
-- **17+ forecasting methods** implemented
+- **20+ forecasting methods** implemented (including LSTM, Neural Networks, XGBoost)
 - **Rolling window evaluation** with configurable forecast horizons
 - **Two sample periods** for analysis (first-sample, second-sample)
+- **Advanced feature engineering** module (126 → 5,000+ features)
+- **FRED-MD data loader** with official stationarity transformations
 - **Modular design** with separate function and run modules
 - **Comprehensive error metrics** (RMSE, MAE, MAPE)
 
@@ -19,59 +21,78 @@ This repository contains Python implementations of various machine learning and 
 Naghiayik-python/
 ├── requirements.txt          # Python dependencies
 ├── utils.py                  # Shared utility functions
-├── test_all.py              # Comprehensive test suite
-├── first_sample/            # First sample period analysis
+├── fred_md_loader.py         # FRED-MD data loader with transformations
+├── feature_engineering.py    # Advanced feature engineering module
+├── feature_config.py         # Feature engineering configuration
+├── feature_utils.py          # Feature engineering utilities
+├── prepare_data_fe.py        # Prepare feature-engineered datasets
+├── first_sample/             # First sample period analysis (~2000-2025)
 │   ├── __init__.py
-│   ├── functions/           # Model function implementations
-│   │   ├── func_ar.py       # Autoregressive models
-│   │   ├── func_lasso.py    # LASSO regression
-│   │   ├── func_rf.py       # Random Forest
-│   │   ├── func_xgb.py      # XGBoost
-│   │   ├── func_nn.py       # Neural Networks
-│   │   ├── func_boosting.py # Gradient Boosting
-│   │   ├── func_bag.py      # Bagging
-│   │   ├── func_csr.py      # Complete Subset Regression
-│   │   ├── func_fact.py     # Factor Models
-│   │   ├── func_tfact.py    # Targeted Factor Models
-│   │   ├── func_scad.py     # SCAD Penalized Regression
-│   │   ├── func_jn.py       # Jackknife
-│   │   ├── func_rfols.py    # Random Forest OLS
-│   │   ├── func_lbvar.py    # Large Bayesian VAR
-│   │   ├── func_ucsv.py     # Unobserved Components SV
-│   │   ├── func_polilasso.py    # Polynomial LASSO
-│   │   ├── func_adalassorf.py   # Adaptive LASSO RF
+│   ├── rawdata.csv           # Pre-processed FRED-MD data (502 rows)
+│   ├── rawdata_fe.csv        # Feature-engineered data (502×5061)
+│   ├── functions/            # Model function implementations
+│   │   ├── func_ar.py        # Autoregressive models
+│   │   ├── func_lasso.py     # LASSO regression
+│   │   ├── func_rf.py        # Random Forest
+│   │   ├── func_xgb.py       # XGBoost
+│   │   ├── func_nn.py        # Neural Networks
+│   │   ├── func_lstm.py      # LSTM Deep Learning
+│   │   ├── func_boosting.py  # Gradient Boosting
+│   │   ├── func_bag.py       # Bagging
+│   │   ├── func_csr.py       # Complete Subset Regression
+│   │   ├── func_fact.py      # Factor Models
+│   │   ├── func_tfact.py     # Targeted Factor Models
+│   │   ├── func_scad.py      # SCAD Penalized Regression
+│   │   ├── func_jn.py        # Jackknife
+│   │   ├── func_rfols.py     # Random Forest OLS
+│   │   ├── func_lbvar.py     # Large Bayesian VAR
+│   │   ├── func_ucsv.py      # Unobserved Components SV
+│   │   ├── func_polilasso.py # Polynomial LASSO
+│   │   ├── func_adalassorf.py # Adaptive LASSO RF
+│   │   ├── func_rffact.py    # Random Forest Factor
 │   │   └── __init__.py
-│   └── run/                 # Execution scripts
-│       ├── ar.py            # Run AR models
-│       ├── lasso.py         # Run LASSO
-│       ├── adalasso.py      # Run Adaptive LASSO
-│       ├── elasticnet.py    # Run Elastic Net
-│       ├── ridge.py         # Run Ridge Regression
-│       ├── rf.py            # Run Random Forest
-│       ├── xgb.py           # Run XGBoost
-│       ├── nn.py            # Run Neural Networks
-│       ├── boosting.py      # Run Boosting
-│       ├── bagging.py       # Run Bagging
-│       ├── csr.py           # Run CSR
-│       ├── factors.py       # Run Factor Models
-│       ├── tfactors.py      # Run Targeted Factors
-│       ├── scad.py          # Run SCAD
-│       ├── jackknife.py     # Run Jackknife
-│       ├── rfols.py         # Run RF-OLS
-│       ├── lbvar.py         # Run LBVAR
-│       ├── ucsv.py          # Run UC-SV
+│   └── run/                  # Execution scripts
+│       ├── ar.py             # Run AR models
+│       ├── lasso.py          # Run LASSO
+│       ├── adalasso.py       # Run Adaptive LASSO
+│       ├── elasticnet.py     # Run Elastic Net
+│       ├── ridge.py          # Run Ridge Regression
+│       ├── rf.py             # Run Random Forest
+│       ├── rf_fe.py          # Run RF with Feature Engineering
+│       ├── xgb.py            # Run XGBoost
+│       ├── xgb_fe.py         # Run XGBoost with Feature Engineering
+│       ├── nn.py             # Run Neural Networks
+│       ├── lstm.py           # Run LSTM
+│       ├── lstm_fe.py        # Run LSTM with Feature Engineering
+│       ├── boosting.py       # Run Boosting
+│       ├── bagging.py        # Run Bagging
+│       ├── csr.py            # Run CSR
+│       ├── factors.py        # Run Factor Models
+│       ├── tfactors.py       # Run Targeted Factors
+│       ├── scad.py           # Run SCAD
+│       ├── jackknife.py      # Run Jackknife
+│       ├── rfols.py          # Run RF-OLS
+│       ├── lbvar.py          # Run LBVAR
+│       ├── ucsv.py           # Run UC-SV
 │       └── __init__.py
-└── second_sample/           # Second sample period analysis
+└── second_sample/            # Second sample period analysis (~1959-2025)
     ├── __init__.py
-    ├── functions/           # Same structure as first_sample
-    │   ├── func_flasso.py   # Forecast LASSO (unique)
-    │   ├── func_rflasso.py  # RF LASSO (unique)
+    ├── rawdata.csv           # Pre-processed FRED-MD data (800 rows)
+    ├── rawdata_fe.csv        # Feature-engineered data (800×5061)
+    ├── functions/            # Same structure as first_sample
+    │   ├── func_flasso.py    # Forecast LASSO (unique)
+    │   ├── func_rflasso.py   # RF LASSO (unique)
+    │   ├── func_lstm.py      # LSTM Deep Learning
     │   └── ... (same as first_sample)
     └── run/
-        ├── cm.py            # Combination Methods (unique)
-        ├── fadalasso.py     # Forecast Adaptive LASSO
-        ├── rflasso.py       # RF LASSO
-        ├── rlasso.py        # Robust LASSO
+        ├── cm.py             # Combination Methods (unique)
+        ├── fadalasso.py      # Forecast Adaptive LASSO
+        ├── rflasso.py        # RF LASSO
+        ├── rlasso.py         # Robust LASSO
+        ├── lstm.py           # Run LSTM
+        ├── lstm_fe.py        # Run LSTM with Feature Engineering
+        ├── rf_fe.py          # Run RF with Feature Engineering
+        ├── xgb_fe.py         # Run XGBoost with Feature Engineering
         └── ... (same as first_sample)
 ```
 
@@ -96,9 +117,71 @@ pip install -r requirements.txt
 | scipy | ≥1.10.0 | Scientific computing |
 | scikit-learn | ≥1.3.0 | Machine learning algorithms |
 | xgboost | ≥2.0.0 | Gradient boosting |
+| tensorflow | ≥2.13.0 | Deep learning (LSTM, Neural Networks) |
 | pyreadr | ≥0.5.0 | Load R data files (.rda, .RData) |
 | matplotlib | ≥3.7.0 | Visualization (optional) |
 | statsmodels | ≥0.14.0 | Statistical models (optional) |
+
+## 🔬 Feature Engineering
+
+The project includes an advanced feature engineering module that expands the original 126 FRED-MD variables to 5,000+ features:
+
+### Features Generated
+| Feature Type | Description |
+|--------------|-------------|
+| Rolling Statistics | Mean, std, min, max, skew, kurtosis (windows: 3, 6, 12) |
+| Momentum | Price changes over multiple periods |
+| Volatility | Rolling standard deviation |
+| Z-Scores | Normalized rolling statistics |
+| Cross-sectional | Mean, std, percentile rankings |
+
+### Using Feature Engineering
+
+```python
+# Generate feature-engineered dataset
+python prepare_data_fe.py
+
+# This creates rawdata_fe.csv in each sample folder
+# Features: 126 → 5,061 (rolling stats, momentum, volatility, z-scores)
+```
+
+### Running Feature-Engineered Models
+
+```python
+# Run Random Forest with feature engineering
+python first_sample/run/rf_fe.py
+
+# Run XGBoost with feature engineering  
+python first_sample/run/xgb_fe.py
+
+# Run LSTM with feature engineering
+python first_sample/run/lstm_fe.py
+```
+
+## 🧠 FRED-MD Data Pipeline
+
+The project handles FRED-MD data with official stationarity transformations:
+
+### Transformation Codes (FRED-MD Official)
+| Code | Transformation |
+|------|----------------|
+| 1 | No transformation |
+| 2 | First difference: Δx_t |
+| 3 | Second difference: Δ²x_t |
+| 4 | Log: log(x_t) |
+| 5 | Log first difference: Δlog(x_t) |
+| 6 | Log second difference: Δ²log(x_t) |
+| 7 | Percentage change: (x_t/x_{t-1} - 1) |
+
+### Loading Raw FRED-MD Data
+
+```python
+from fred_md_loader import FREDMDLoader
+
+# Load and transform raw FRED-MD data
+loader = FREDMDLoader('2025-11-MD.csv')
+transformed = loader.get_transformed_data()
+```
 
 ## 🚀 Usage
 
@@ -154,6 +237,7 @@ results = ar_main(data_path='first-sample/rawdata.rda', nprev=132)
 | Random Forest | Ensemble of decision trees | `func_rf.py` |
 | XGBoost | Extreme Gradient Boosting | `func_xgb.py` |
 | Neural Network | Feedforward neural network | `func_nn.py` |
+| LSTM | Long Short-Term Memory networks | `func_lstm.py` |
 | Gradient Boosting | Sequential ensemble | `func_boosting.py` |
 | Bagging | Bootstrap aggregating | `func_bag.py` |
 
@@ -192,35 +276,51 @@ nprev = 132 (132 out-of-sample forecast points)
 
 ## 🧪 Testing
 
-Run the comprehensive test suite:
+Run individual models:
 
 ```bash
 cd Naghiayik-python
-python test_all.py
+
+# Run AR model
+python first_sample/run/ar.py
+
+# Run LSTM model
+python first_sample/run/lstm.py
+
+# Run feature-engineered models
+python first_sample/run/rf_fe.py
+python first_sample/run/xgb_fe.py
+python first_sample/run/lstm_fe.py
 ```
 
 Expected output:
 ```
-============================================================
-NAGHIAYIK PYTHON TEST SUITE
-============================================================
-[1] SYNTAX CHECK
-----------------------------------------
-  OK: utils.py
-  OK: first_sample/functions/func_ar.py
-  ... (88 files)
-
-Syntax Results: 88 passed, 0 failed
-============================================================
+Running Random Forest with Feature Engineering...
+Loading feature-engineered data: first_sample/rawdata_fe.csv
+Feature dimensions: (502, 5061)
+Rolling window evaluation: 132 forecasts
+RMSE: 0.XXX, MAE: 0.XXX
 ```
 
 ## 📚 Data Format
 
 ### Input Data Structure
-The input data (`rawdata.rda` or `rawdata.RData`) should contain:
-- A DataFrame/matrix with time series observations
-- First column: target variable (inflation measure)
-- Remaining columns: predictor variables (macroeconomic indicators)
+The input data (`rawdata.csv`) contains:
+- A DataFrame with time series observations (FRED-MD format)
+- First column: target variable (inflation measure - CPI)
+- Remaining columns: predictor variables (126 macroeconomic indicators)
+- Data is pre-transformed using official FRED-MD stationarity codes
+
+### Sample Periods
+| Sample | Rows | nprev | Period |
+|--------|------|-------|--------|
+| first_sample | 502 | 132 | ~2000-2025 |
+| second_sample | 800 | 298 | ~1959-2025 |
+
+### Feature-Engineered Data
+- `rawdata_fe.csv`: Extended features (5,061 columns)
+- Rolling statistics, momentum, volatility, z-scores
+- Generated by `prepare_data_fe.py`
 
 ### Output Format
 Each model returns a dictionary containing:
@@ -252,5 +352,9 @@ Each model returns a dictionary containing:
 1. Medeiros, M. C., Vasconcelos, G., Veiga, A., & Zilberman, E. (2018). **Forecasting Inflation in a Data-Rich Environment: The Benefits of Machine Learning Methods.** Journal of Business & Economic Statistics.
 
 2. Original R Implementation: [HDeconometrics](https://github.com/gabrielrvsc/HDeconometrics)
+
+## 📄 License
+
+MIT License - See [LICENSE](../Naghiayik/LICENSE) for details.
 
 
