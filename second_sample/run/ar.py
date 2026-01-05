@@ -26,7 +26,7 @@ def main():
     # dum[which.min(Y[,1])]=1  # Creates dummy at minimum CPI value
     Y = add_outlier_dummy(Y, target_col=0)
     
-    nprev = 180  # Paper specification for second sample
+    nprev = 298  # Out-of-sample 2001-2025
     
     results = {}
     

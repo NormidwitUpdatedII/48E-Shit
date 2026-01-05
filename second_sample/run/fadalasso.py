@@ -22,7 +22,7 @@ def main():
     # Load data
     Y = load_csv(DATA_PATH)
     
-    nprev = 180  # Paper specification for second sample
+    nprev = 298  # Out-of-sample 2001-2025
     alpha = 1
     
     results = {}

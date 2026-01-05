@@ -25,7 +25,7 @@ def main():
     # Add dummy variable for outliers (COVID period) as in the R code
     Y = add_outlier_dummy(Y, target_col=0)
     
-    nprev = 180  # Paper specification for second sample
+    nprev = 298  # Out-of-sample 2001-2025
     alpha = 1  # LASSO
     
     print("Running Adaptive LASSO forecasts (second sample with dummy)...")
