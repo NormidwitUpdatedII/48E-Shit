@@ -39,7 +39,11 @@ from feature_utils import (
 )
 
 from sklearn.ensemble import RandomForestRegressor
+from joblib import Parallel, delayed
 
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
 
 # Optimized RF parameters (from EC48E project)
 RF_PARAMS = {
@@ -131,9 +135,17 @@ def run_rf_fe(Y, indice, lag):
     }
 
 
+def _rf_fe_single_iteration(i, Y, indice, lag):
+    """Single iteration for parallel RF-FE rolling window."""
+    Y_train = Y[:i, :]
+    result = run_rf_fe(Y_train, indice, lag)
+    actual = Y[i + lag - 1, indice - 1]
+    return i, result['pred'], actual
+
+
 def rf_fe_rolling_window(Y, nprev, indice, lag):
     """
-    Run Random Forest with Feature Engineering using rolling window.
+    Run Random Forest with Feature Engineering using rolling window (PARALLELIZED).
     
     Parameters:
     -----------
@@ -153,23 +165,17 @@ def rf_fe_rolling_window(Y, nprev, indice, lag):
     Y = np.array(Y)
     nobs = Y.shape[0]
     
-    predictions = []
-    actuals = []
+    # PARALLEL execution of rolling window
+    print(f"    Running {nobs - lag + 1 - nprev} RF-FE iterations in parallel...")
+    results = Parallel(n_jobs=N_JOBS, verbose=1)(
+        delayed(_rf_fe_single_iteration)(i, Y, indice, lag)
+        for i in range(nprev, nobs - lag + 1)
+    )
     
-    # Rolling window forecasting
-    for i in range(nprev, nobs - lag + 1):
-        Y_train = Y[:i, :]
-        
-        result = run_rf_fe(Y_train, indice, lag)
-        pred = result['pred']
-        predictions.append(pred)
-        
-        # Get actual value
-        actual = Y[i + lag - 1, indice - 1]
-        actuals.append(actual)
-    
-    predictions = np.array(predictions)
-    actuals = np.array(actuals)
+    # Sort by index and extract predictions/actuals
+    results.sort(key=lambda x: x[0])
+    predictions = np.array([r[1] for r in results])
+    actuals = np.array([r[2] for r in results])
     
     # Calculate errors
     errors = calculate_errors(actuals, predictions)

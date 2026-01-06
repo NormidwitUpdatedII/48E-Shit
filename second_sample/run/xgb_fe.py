@@ -27,6 +27,12 @@ try:
 except ImportError:
     XGB_AVAILABLE = False
 
+from joblib import Parallel, delayed
+
+
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
+
 XGB_PARAMS = {
     'n_estimators': 200, 'max_depth': 6, 'learning_rate': 0.05,
     'subsample': 0.8, 'colsample_bytree': 0.8, 'random_state': 42, 'n_jobs': -1, 'verbosity': 0
@@ -78,17 +84,30 @@ def run_xgb_fe(Y, indice, lag):
     return {'model': model, 'pred': model.predict(X_out)[0]}
 
 
+def _xgb_fe_single_iteration(i, Y, indice, lag):
+    """Single iteration for parallel XGB-FE rolling window."""
+    result = run_xgb_fe(Y[:i, :], indice, lag)
+    actual = Y[i + lag - 1, indice - 1]
+    return i, result['pred'], actual
+
+
 def xgb_fe_rolling_window(Y, nprev, indice, lag):
+    """Run XGB with FE using rolling window (PARALLELIZED)."""
     Y = np.array(Y)
     nobs = Y.shape[0]
-    predictions, actuals = [], []
     
-    for i in range(nprev, nobs - lag + 1):
-        result = run_xgb_fe(Y[:i, :], indice, lag)
-        predictions.append(result['pred'])
-        actuals.append(Y[i + lag - 1, indice - 1])
+    # PARALLEL execution of rolling window
+    print(f"    Running {nobs - lag + 1 - nprev} XGB-FE iterations in parallel...")
+    results = Parallel(n_jobs=N_JOBS, verbose=1)(
+        delayed(_xgb_fe_single_iteration)(i, Y, indice, lag)
+        for i in range(nprev, nobs - lag + 1)
+    )
     
-    predictions, actuals = np.array(predictions), np.array(actuals)
+    # Sort by index and extract predictions/actuals
+    results.sort(key=lambda x: x[0])
+    predictions = np.array([r[1] for r in results])
+    actuals = np.array([r[2] for r in results])
+    
     return {'pred': predictions, 'actuals': actuals, 'errors': calculate_errors(actuals, predictions)}
 
 

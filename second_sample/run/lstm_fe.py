@@ -27,9 +27,17 @@ try:
     from tensorflow.keras.layers import LSTM, Dense, Dropout
     from tensorflow.keras.optimizers import Adam
     from tensorflow.keras.callbacks import EarlyStopping
+    import tensorflow as tf
+    tf.get_logger().setLevel('ERROR')
     KERAS_AVAILABLE = True
 except ImportError:
     KERAS_AVAILABLE = False
+
+from joblib import Parallel, delayed
+
+
+# Number of parallel jobs for LSTM (limited to avoid GPU memory issues)
+N_JOBS_LSTM = 2
 
 
 def run_lstm_fe(Y, indice, lag, lstm_units=64, dropout_rate=0.2):
@@ -98,20 +106,33 @@ def run_lstm_fe(Y, indice, lag, lstm_units=64, dropout_rate=0.2):
     return {'model': model, 'pred': model.predict(X_out_lstm, verbose=0)[0, 0]}
 
 
+def _lstm_fe_single_iteration(i, Y, indice, lag, lstm_units, dropout_rate):
+    """Single iteration for parallel LSTM-FE rolling window."""
+    result = run_lstm_fe(Y[:i, :], indice, lag, lstm_units, dropout_rate)
+    actual = Y[i + lag - 1, indice - 1]
+    return i, result['pred'], actual
+
+
 def lstm_fe_rolling_window(Y, nprev, indice, lag, lstm_units=64, dropout_rate=0.2):
+    """Run LSTM with FE using rolling window (PARALLELIZED with limited workers)."""
     if not KERAS_AVAILABLE:
         raise ImportError("TensorFlow/Keras required")
     
     Y = np.array(Y)
     nobs = Y.shape[0]
-    predictions, actuals = [], []
     
-    for i in range(nprev, nobs - lag + 1):
-        result = run_lstm_fe(Y[:i, :], indice, lag, lstm_units, dropout_rate)
-        predictions.append(result['pred'])
-        actuals.append(Y[i + lag - 1, indice - 1])
+    # PARALLEL execution with limited workers (LSTM is memory intensive)
+    print(f"    Running {nobs - lag + 1 - nprev} LSTM-FE iterations in parallel (n_jobs={N_JOBS_LSTM})...")
+    results = Parallel(n_jobs=N_JOBS_LSTM, verbose=1)(
+        delayed(_lstm_fe_single_iteration)(i, Y, indice, lag, lstm_units, dropout_rate)
+        for i in range(nprev, nobs - lag + 1)
+    )
     
-    predictions, actuals = np.array(predictions), np.array(actuals)
+    # Sort by index and extract predictions/actuals
+    results.sort(key=lambda x: x[0])
+    predictions = np.array([r[1] for r in results])
+    actuals = np.array([r[2] for r in results])
+    
     return {'pred': predictions, 'actuals': actuals, 'errors': calculate_errors(actuals, predictions)}
 
 
