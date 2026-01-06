@@ -14,6 +14,10 @@ from joblib import Parallel, delayed
 from utils import embed, compute_pca_scores, calculate_errors, plot_forecast
 
 
+# Number of parallel jobs (-1 = use all CPU cores)
+N_JOBS = -1
+
+
 class ICGlmnet:
     """
     Information Criterion based GLMnet model selection.
@@ -266,9 +270,17 @@ def run_pols(Y, indice, lag, coef):
     return {'model': model, 'pred': pred}
 
 
+def _lasso_single_iteration(i, Y, nprev, indice, lag, alpha, model_type):
+    """Single iteration for parallel processing."""
+    Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
+    result = run_lasso(Y_window, indice, lag, alpha, model_type)
+    idx = nprev - i
+    return idx, result['model'].coef, result['pred']
+
+
 def lasso_rolling_window(Y, nprev, indice=1, lag=1, alpha=1.0, model_type="lasso"):
     """
-    Rolling window LASSO forecasting.
+    Rolling window LASSO forecasting (PARALLELIZED).
     
     Parameters:
     -----------
@@ -295,19 +307,17 @@ def lasso_rolling_window(Y, nprev, indice=1, lag=1, alpha=1.0, model_type="lasso
     save_coef = np.full((nprev, n_coef), np.nan)
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
-        # Window selection
-        Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-        
-        # Run LASSO model
-        result = run_lasso(Y_window, indice, lag, alpha, model_type)
-        
-        idx = nprev - i
-        coef = result['model'].coef
+    # PARALLEL execution of rolling window
+    print(f"Running {nprev} iterations in parallel...")
+    results = Parallel(n_jobs=N_JOBS, verbose=1)(
+        delayed(_lasso_single_iteration)(i, Y, nprev, indice, lag, alpha, model_type)
+        for i in range(nprev, 0, -1)
+    )
+    
+    # Collect results
+    for idx, coef, pred in results:
         save_coef[idx, :len(coef)] = coef
-        save_pred[idx, 0] = result['pred']
-        
-        print(f"iteration {idx + 1}")
+        save_pred[idx, 0] = pred
     
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed
@@ -317,9 +327,19 @@ def lasso_rolling_window(Y, nprev, indice=1, lag=1, alpha=1.0, model_type="lasso
     return {'pred': save_pred, 'coef': save_coef, 'errors': errors}
 
 
+def _pols_single_iteration(i, Y, nprev, indice, lag, coef_matrix):
+    """Single iteration for parallel Post-OLS."""
+    idx = nprev - i
+    Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
+    coef = coef_matrix[idx, :]
+    coef = coef[~np.isnan(coef)]
+    result = run_pols(Y_window, indice, lag, coef)
+    return idx, result['pred']
+
+
 def pols_rolling_window(Y, nprev, indice=1, lag=1, coef_matrix=None):
     """
-    Rolling window Post-OLS forecasting.
+    Rolling window Post-OLS forecasting (PARALLELIZED).
     
     Parameters:
     -----------
@@ -341,22 +361,15 @@ def pols_rolling_window(Y, nprev, indice=1, lag=1, coef_matrix=None):
     Y = np.array(Y)
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
-        idx = nprev - i
-        
-        # Window selection
-        Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-        
-        # Get coefficients for this iteration
-        coef = coef_matrix[idx, :]
-        coef = coef[~np.isnan(coef)]
-        
-        # Run Post-OLS model
-        result = run_pols(Y_window, indice, lag, coef)
-        
-        save_pred[idx, 0] = result['pred']
-        
-        print(f"iteration {idx + 1}")
+    # PARALLEL execution
+    print(f"Running {nprev} Post-OLS iterations in parallel...")
+    results = Parallel(n_jobs=N_JOBS, verbose=1)(
+        delayed(_pols_single_iteration)(i, Y, nprev, indice, lag, coef_matrix)
+        for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
     
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed

@@ -10,6 +10,7 @@ STANDARD MODELS (using rawdata.csv):
 - AR (Autoregressive) with lags 1, 4, 12
 - BIC-selected AR with max lags 4, 12
 - LASSO (with lags 1, 4, 12)
+- Adaptive LASSO (with lags 1, 4, 12)
 - Ridge (with lags 1, 4, 12)
 - Elastic Net (with lags 1, 4, 12)
 - Random Forest (with lags 1, 4, 12)
@@ -24,7 +25,7 @@ STANDARD MODELS (using rawdata.csv):
 - SCAD (with lags 1, 4, 12)
 - Jackknife (with lags 1, 4, 12)
 - RF-OLS (with lags 1, 4, 12)
-- Adalasso RF (with lags 1, 4, 12)
+- Adalasso-RF (with lags 1, 4, 12)
 - Polynomial LASSO (with lags 1, 4, 12)
 
 FEATURE-ENGINEERED MODELS (using rawdata_fe.csv with 5000+ features):
@@ -65,31 +66,56 @@ print("=" * 80)
 print(f"\nReport Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 print("\nLoading model functions...")
 
-# Core models
-from first_sample.functions.func_ar import ar_rolling_window
-from first_sample.functions.func_lasso import lasso_rolling_window
-from first_sample.functions.func_rf import rf_rolling_window
-from first_sample.functions.func_xgb import xgb_rolling_window
-from first_sample.functions.func_nn import nn_rolling_window
-from first_sample.functions.func_boosting import boosting_rolling_window
-from first_sample.functions.func_bag import bagg_rolling_window
-from first_sample.functions.func_csr import csr_rolling_window
-from first_sample.functions.func_fact import fact_rolling_window
-from first_sample.functions.func_tfact import tfact_rolling_window
-from first_sample.functions.func_scad import scad_rolling_window
-from first_sample.functions.func_jn import jackknife_rolling_window
-from first_sample.functions.func_rfols import rfols_rolling_window
-from first_sample.functions.func_adalassorf import adalasso_rf_rolling_window
-from first_sample.functions.func_polilasso import polilasso_rolling_window
+# Core models - FIRST SAMPLE
+from first_sample.functions.func_ar import ar_rolling_window as ar_rolling_window_first
+from first_sample.functions.func_lasso import lasso_rolling_window as lasso_rolling_window_first
+from first_sample.functions.func_rf import rf_rolling_window as rf_rolling_window_first
+from first_sample.functions.func_xgb import xgb_rolling_window as xgb_rolling_window_first
+from first_sample.functions.func_nn import nn_rolling_window as nn_rolling_window_first
+from first_sample.functions.func_boosting import boosting_rolling_window as boosting_rolling_window_first
+from first_sample.functions.func_bag import bagg_rolling_window as bagg_rolling_window_first
+from first_sample.functions.func_csr import csr_rolling_window as csr_rolling_window_first
+from first_sample.functions.func_fact import fact_rolling_window as fact_rolling_window_first
+from first_sample.functions.func_tfact import tfact_rolling_window as tfact_rolling_window_first
+from first_sample.functions.func_scad import scad_rolling_window as scad_rolling_window_first
+from first_sample.functions.func_jn import jackknife_rolling_window as jackknife_rolling_window_first
+from first_sample.functions.func_rfols import rfols_rolling_window as rfols_rolling_window_first
+from first_sample.functions.func_adalassorf import adalasso_rf_rolling_window as adalasso_rf_rolling_window_first
+from first_sample.functions.func_polilasso import polilasso_rolling_window as polilasso_rolling_window_first
+
+# Core models - SECOND SAMPLE
+from second_sample.functions.func_ar import ar_rolling_window as ar_rolling_window_second
+from second_sample.functions.func_lasso import lasso_rolling_window as lasso_rolling_window_second
+from second_sample.functions.func_rf import rf_rolling_window as rf_rolling_window_second
+from second_sample.functions.func_xgb import xgb_rolling_window as xgb_rolling_window_second
+from second_sample.functions.func_nn import nn_rolling_window as nn_rolling_window_second
+from second_sample.functions.func_boosting import boosting_rolling_window as boosting_rolling_window_second
+from second_sample.functions.func_bag import bagg_rolling_window as bagg_rolling_window_second
+from second_sample.functions.func_csr import csr_rolling_window as csr_rolling_window_second
+from second_sample.functions.func_fact import fact_rolling_window as fact_rolling_window_second
+from second_sample.functions.func_tfact import tfact_rolling_window as tfact_rolling_window_second
+from second_sample.functions.func_scad import scad_rolling_window as scad_rolling_window_second
+from second_sample.functions.func_jn import jackknife_rolling_window as jackknife_rolling_window_second
+from second_sample.functions.func_rfols import rfols_rolling_window as rfols_rolling_window_second
+from second_sample.functions.func_adalassorf import adalasso_rf_rolling_window as adalasso_rf_rolling_window_second
+from second_sample.functions.func_polilasso import polilasso_rolling_window as polilasso_rolling_window_second
 
 # Try to import LSTM (requires TensorFlow)
 try:
-    from first_sample.functions.func_lstm import lstm_rolling_window
-    LSTM_AVAILABLE = True
-    print("  ✓ LSTM model available (TensorFlow found)")
+    from first_sample.functions.func_lstm import lstm_rolling_window as lstm_rolling_window_first
+    LSTM_FIRST_AVAILABLE = True
+    print("  ✓ LSTM model (first_sample) available")
 except ImportError as e:
-    LSTM_AVAILABLE = False
-    print(f"  ✗ LSTM model unavailable: {e}")
+    LSTM_FIRST_AVAILABLE = False
+    print(f"  ✗ LSTM model (first_sample) unavailable: {e}")
+
+try:
+    from second_sample.functions.func_lstm import lstm_rolling_window as lstm_rolling_window_second
+    LSTM_SECOND_AVAILABLE = True
+    print("  ✓ LSTM model (second_sample) available")
+except ImportError as e:
+    LSTM_SECOND_AVAILABLE = False
+    print(f"  ✗ LSTM model (second_sample) unavailable: {e}")
 
 # Import Feature-Engineered model functions from run scripts
 # First Sample FE models
@@ -231,8 +257,31 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     forecast_data = {}  # Store predictions for plotting
     target_name = "CPI" if indice == 1 else "PCE"
     
+    # Determine which sample's functions to use
+    is_first_sample = "First" in sample_name or "first" in sample_name
+    
+    # Select appropriate function set
+    ar_rolling_window = ar_rolling_window_first if is_first_sample else ar_rolling_window_second
+    lasso_rolling_window = lasso_rolling_window_first if is_first_sample else lasso_rolling_window_second
+    rf_rolling_window = rf_rolling_window_first if is_first_sample else rf_rolling_window_second
+    xgb_rolling_window = xgb_rolling_window_first if is_first_sample else xgb_rolling_window_second
+    nn_rolling_window = nn_rolling_window_first if is_first_sample else nn_rolling_window_second
+    boosting_rolling_window = boosting_rolling_window_first if is_first_sample else boosting_rolling_window_second
+    bagg_rolling_window = bagg_rolling_window_first if is_first_sample else bagg_rolling_window_second
+    csr_rolling_window = csr_rolling_window_first if is_first_sample else csr_rolling_window_second
+    fact_rolling_window = fact_rolling_window_first if is_first_sample else fact_rolling_window_second
+    tfact_rolling_window = tfact_rolling_window_first if is_first_sample else tfact_rolling_window_second
+    scad_rolling_window = scad_rolling_window_first if is_first_sample else scad_rolling_window_second
+    jackknife_rolling_window = jackknife_rolling_window_first if is_first_sample else jackknife_rolling_window_second
+    rfols_rolling_window = rfols_rolling_window_first if is_first_sample else rfols_rolling_window_second
+    adalasso_rf_rolling_window = adalasso_rf_rolling_window_first if is_first_sample else adalasso_rf_rolling_window_second
+    polilasso_rolling_window = polilasso_rolling_window_first if is_first_sample else polilasso_rolling_window_second
+    lstm_rolling_window = lstm_rolling_window_first if is_first_sample else lstm_rolling_window_second
+    LSTM_AVAILABLE = LSTM_FIRST_AVAILABLE if is_first_sample else LSTM_SECOND_AVAILABLE
+    
     print(f"\n{'='*60}")
     print(f"Running models for {sample_name} - {target_name}")
+    print(f"Using {'first_sample' if is_first_sample else 'second_sample'} functions")
     print(f"{'='*60}")
     print(f"Data shape: {Y.shape}")
     print(f"Out-of-sample periods: {nprev}")
@@ -309,7 +358,7 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     print("\n--- Ridge Models ---")
     for lag in [1, 4, 12]:
         print(f"  Running Ridge(lag={lag})...", end=" ")
-        res = run_model_safely(lasso_rolling_window, Y, nprev, indice, lag, f'Ridge({lag})', alpha=0.0, model_type='ridge')
+        res = run_model_safely(lasso_rolling_window, Y, nprev, indice, lag, f'Ridge({lag})', alpha=0.0, model_type='lasso')
         print(f"RMSE: {res['rmse']:.6f}" if res['success'] else f"FAILED: {res['error']}")
         results.append({
             'Model': f'Ridge({lag})',
@@ -329,7 +378,7 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     print("\n--- Elastic Net Models ---")
     for lag in [1, 4, 12]:
         print(f"  Running ElasticNet(lag={lag})...", end=" ")
-        res = run_model_safely(lasso_rolling_window, Y, nprev, indice, lag, f'ElasticNet({lag})', alpha=0.5, model_type='elasticnet')
+        res = run_model_safely(lasso_rolling_window, Y, nprev, indice, lag, f'ElasticNet({lag})', alpha=0.5, model_type='lasso')
         print(f"RMSE: {res['rmse']:.6f}" if res['success'] else f"FAILED: {res['error']}")
         results.append({
             'Model': f'ElasticNet({lag})',
@@ -342,6 +391,26 @@ def run_all_models(Y, nprev, sample_name, indice=1):
         })
         if res['success'] and res['pred'] is not None:
             forecast_data[f'ElasticNet({lag})'] = {'pred': res['pred'], 'real': res['real']}
+    
+    # =========================================================================
+    # Adaptive LASSO Models
+    # =========================================================================
+    print("\n--- Adaptive LASSO Models ---")
+    for lag in [1, 4, 12]:
+        print(f"  Running AdaLASSO(lag={lag})...", end=" ")
+        res = run_model_safely(lasso_rolling_window, Y, nprev, indice, lag, f'AdaLASSO({lag})', alpha=1.0, model_type='adalasso')
+        print(f"RMSE: {res['rmse']:.6f}" if res['success'] else f"FAILED: {res['error']}")
+        results.append({
+            'Model': f'AdaLASSO({lag})',
+            'Category': 'Adaptive LASSO',
+            'Lag': lag,
+            'RMSE': res['rmse'],
+            'MAE': res['mae'],
+            'Success': res['success'],
+            'Time(s)': res['time']
+        })
+        if res['success'] and res['pred'] is not None:
+            forecast_data[f'AdaLASSO({lag})'] = {'pred': res['pred'], 'real': res['real']}
     
     # =========================================================================
     # Random Forest Models
@@ -590,7 +659,7 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     print("\n--- Adalasso-RF Models ---")
     for lag in [1, 4, 12]:
         print(f"  Running Adalasso-RF(lag={lag})...", end=" ")
-        res = run_model_safely(adalasso_rf_rolling_window, Y, nprev, indice, lag, f'Adalasso-RF({lag})', alpha=1.0, model_type='lasso')
+        res = run_model_safely(adalasso_rf_rolling_window, Y, nprev, indice, lag, f'Adalasso-RF({lag})')
         print(f"RMSE: {res['rmse']:.6f}" if res['success'] else f"FAILED: {res['error']}")
         results.append({
             'Model': f'Adalasso-RF({lag})',
@@ -610,7 +679,7 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     print("\n--- Polynomial LASSO Models ---")
     for lag in [1, 4, 12]:
         print(f"  Running PolyLASSO(lag={lag})...", end=" ")
-        res = run_model_safely(polilasso_rolling_window, Y, nprev, indice, lag, f'PolyLASSO({lag})', alpha=1.0, model_type='lasso')
+        res = run_model_safely(polilasso_rolling_window, Y, nprev, indice, lag, f'PolyLASSO({lag})')
         print(f"RMSE: {res['rmse']:.6f}" if res['success'] else f"FAILED: {res['error']}")
         results.append({
             'Model': f'PolyLASSO({lag})',
@@ -629,8 +698,6 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     # These models use additional feature engineering from EC48E project
     # Note: Sample-specific FE models are used based on sample_name
     # =========================================================================
-    
-    is_first_sample = "First" in sample_name or "first" in sample_name
     
     # RF with Feature Engineering
     rf_fe_func = rf_fe_rolling_window_first if is_first_sample else rf_fe_rolling_window_second
