@@ -110,9 +110,17 @@ def run_rfols(Y, indice, lag):
     return {'pred': final_pred, 'model': 'rfols'}
 
 
+def _rfols_single_iteration(i, Y, nprev, indice, lag):
+    """Single iteration for parallel RFOLS rolling window."""
+    Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
+    result = run_rfols(Y_window, indice, lag)
+    idx = nprev - i
+    return idx, result['pred']
+
+
 def rfols_rolling_window(Y, nprev, indice=1, lag=1):
     """
-    Rolling window Random Forest OLS forecasting.
+    Rolling window Random Forest OLS forecasting (PARALLELIZED).
     
     Parameters:
     -----------
@@ -132,17 +140,17 @@ def rfols_rolling_window(Y, nprev, indice=1, lag=1):
     Y = np.array(Y)
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
-        # Window selection
-        Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-        
-        # Run RFOLS model
-        pred = run_rfols(Y_window, indice, lag)
-        
-        idx = nprev - i
+    # PARALLEL execution of rolling window
+    print(f"    Running {nprev} RFOLS iterations in parallel...")
+    results = Parallel(n_jobs=N_JOBS, verbose=1)(
+        delayed(_rfols_single_iteration)(i, Y, nprev, indice, lag)
+        for i in range(nprev, 0, -1)
+    )
+    
+    # Sort by index and extract predictions
+    results.sort(key=lambda x: x[0])
+    for idx, pred in results:
         save_pred[idx, 0] = pred
-        
-        print(f"iteration {idx + 1}")
     
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed
