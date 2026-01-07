@@ -19,7 +19,8 @@ FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 from utils import load_csv, save_forecasts, embed, calculate_errors, add_outlier_dummy
 from feature_engineering import StationaryFeatureEngineer
-from feature_utils import standardize_features, handle_missing_values, select_features_by_variance, remove_highly_correlated
+from feature_utils import standardize_features, handle_missing_values, apply_3stage_feature_selection
+from feature_config import CONSTANT_VARIANCE_THRESHOLD, CORRELATION_THRESHOLD, LOW_VARIANCE_THRESHOLD
 
 try:
     import xgboost as xgb
@@ -68,12 +69,15 @@ def run_xgb_fe(Y, indice, lag):
     y = y_target[:len(y_target) - lag + 1]
     X = X[:X.shape[0] - lag + 1, :]
     
-    X, var_mask = select_features_by_variance(X, threshold=0.001)
-    X_out = X_out[var_mask]
-    
-    if X.shape[1] > 100:
-        X, corr_mask = remove_highly_correlated(X, threshold=0.95)
-        X_out = X_out[corr_mask]
+    # Apply 3-stage feature selection (5061 → ~3500-4000)
+    X, selection_info = apply_3stage_feature_selection(
+        X, 
+        constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
+        correlation_threshold=CORRELATION_THRESHOLD,
+        variance_threshold=LOW_VARIANCE_THRESHOLD,
+        verbose=False
+    )
+    X_out = X_out[selection_info['combined_mask']]
     
     X, scaler = standardize_features(X)
     X_out = scaler.transform(X_out.reshape(1, -1))

@@ -133,7 +133,8 @@ def select_features_by_correlation(X, y, top_k=50):
 
 def remove_highly_correlated(X, threshold=0.95):
     """
-    Remove highly correlated features.
+    Remove highly correlated features (keeps feature with HIGHER variance).
+    OPTIMIZED for large feature sets using vectorized operations.
     
     Parameters:
     -----------
@@ -148,20 +149,30 @@ def remove_highly_correlated(X, threshold=0.95):
     """
     n_features = X.shape[1]
     
-    # Calculate correlation matrix
+    # Calculate variance for each feature (to decide which to keep)
+    variances = np.nanvar(X, axis=0)
+    
+    # Calculate correlation matrix (this is the bottleneck for large n_features)
+    print(f"    Computing correlation matrix for {n_features} features...")
     corr_matrix = np.corrcoef(X.T)
     corr_matrix = np.nan_to_num(corr_matrix, nan=0)
     
-    # Find pairs above threshold
+    # Find pairs above threshold - VECTORIZED approach
+    # Set diagonal to 0 (don't compare feature to itself)
+    np.fill_diagonal(corr_matrix, 0)
+    
+    # Get upper triangle indices where correlation > threshold
+    high_corr_pairs = np.where(np.abs(np.triu(corr_matrix, k=1)) > threshold)
+    
     to_remove = set()
-    for i in range(n_features):
-        if i in to_remove:
+    for i, j in zip(high_corr_pairs[0], high_corr_pairs[1]):
+        if i in to_remove or j in to_remove:
             continue
-        for j in range(i + 1, n_features):
-            if j in to_remove:
-                continue
-            if abs(corr_matrix[i, j]) > threshold:
-                to_remove.add(j)
+        # Remove the one with LOWER variance
+        if variances[i] >= variances[j]:
+            to_remove.add(j)
+        else:
+            to_remove.add(i)
     
     mask = np.ones(n_features, dtype=bool)
     mask[list(to_remove)] = False
@@ -272,3 +283,86 @@ def create_feature_pipeline(X, y=None, standardize=True, reduce_dim=False,
         X, _ = reduce_dimensionality(X, n_components=n_comp)
     
     return X
+
+
+def apply_3stage_feature_selection(X, constant_threshold=1e-8, correlation_threshold=0.95, 
+                                   variance_threshold=0.005, verbose=True):
+    """
+    Apply 3-stage feature selection (RECOMMENDED APPROACH).
+    
+    Stage 1a: Remove TRUE constants (near-zero variance)
+    Stage 1b: Remove highly correlated features (keep higher variance)
+    Stage 1c: Remove low variance features (conservative threshold)
+    
+    Parameters:
+    -----------
+    X : np.ndarray
+        Feature matrix
+    constant_threshold : float
+        Threshold for Stage 1a (default: 1e-8)
+    correlation_threshold : float
+        Threshold for Stage 1b (default: 0.95)
+    variance_threshold : float
+        Threshold for Stage 1c (default: 0.005)
+    verbose : bool
+        Whether to print selection statistics
+    
+    Returns:
+    --------
+    tuple : (X_selected, selection_info)
+        - X_selected: Filtered feature matrix
+        - selection_info: Dictionary with selection statistics
+    """
+    initial_features = X.shape[1]
+    selection_info = {
+        'initial_features': initial_features,
+        'stage_1a_removed': 0,
+        'stage_1b_removed': 0,
+        'stage_1c_removed': 0,
+        'final_features': 0
+    }
+    
+    if verbose:
+        print(f"  [Feature Selection] Starting with {initial_features} features")
+    
+    # Stage 1a: Remove TRUE constants
+    if verbose:
+        print(f"  [Stage 1a] Removing constants (var < {constant_threshold})...")
+    X_stage1a, mask_1a = select_features_by_variance(X, threshold=constant_threshold)
+    removed_1a = initial_features - X_stage1a.shape[1]
+    selection_info['stage_1a_removed'] = removed_1a
+    if verbose:
+        print(f"    Removed {removed_1a} constant features → {X_stage1a.shape[1]} features")
+    
+    # Stage 1b: Remove highly correlated features
+    if verbose:
+        print(f"  [Stage 1b] Removing correlated features (corr > {correlation_threshold})...")
+    X_stage1b, mask_1b = remove_highly_correlated(X_stage1a, threshold=correlation_threshold)
+    removed_1b = X_stage1a.shape[1] - X_stage1b.shape[1]
+    selection_info['stage_1b_removed'] = removed_1b
+    if verbose:
+        print(f"    Removed {removed_1b} correlated features → {X_stage1b.shape[1]} features")
+    
+    # Stage 1c: Remove low variance features (conservative threshold)
+    if verbose:
+        print(f"  [Stage 1c] Removing low variance (var < {variance_threshold})...")
+    X_final, mask_1c = select_features_by_variance(X_stage1b, threshold=variance_threshold)
+    removed_1c = X_stage1b.shape[1] - X_final.shape[1]
+    selection_info['stage_1c_removed'] = removed_1c
+    selection_info['final_features'] = X_final.shape[1]
+    
+    if verbose:
+        print(f"    Removed {removed_1c} low-variance features → {X_final.shape[1]} features")
+        print(f"  [Summary] Total reduction: {initial_features} → {X_final.shape[1]} " +
+              f"({100*(1-X_final.shape[1]/initial_features):.1f}% reduction)")
+    
+    # Build combined mask for traceability
+    combined_mask = mask_1a.copy()
+    combined_mask[combined_mask] = mask_1b
+    temp_mask = combined_mask[combined_mask]
+    temp_mask[temp_mask] = mask_1c
+    combined_mask[combined_mask] = temp_mask
+    
+    selection_info['combined_mask'] = combined_mask
+    
+    return X_final, selection_info

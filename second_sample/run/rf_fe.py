@@ -24,8 +24,12 @@ from feature_engineering import StationaryFeatureEngineer
 from feature_utils import (
     standardize_features, 
     handle_missing_values,
-    select_features_by_variance,
-    remove_highly_correlated
+    apply_3stage_feature_selection
+)
+from feature_config import (
+    CONSTANT_VARIANCE_THRESHOLD,
+    CORRELATION_THRESHOLD,
+    LOW_VARIANCE_THRESHOLD
 )
 
 from sklearn.ensemble import RandomForestRegressor

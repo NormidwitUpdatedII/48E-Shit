@@ -20,7 +20,16 @@ FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 from utils import load_csv, save_forecasts, embed, calculate_errors
 from feature_engineering import StationaryFeatureEngineer
-from feature_utils import standardize_features, handle_missing_values, select_features_by_variance
+from feature_utils import (
+    standardize_features, 
+    handle_missing_values, 
+    apply_3stage_feature_selection
+)
+from feature_config import (
+    CONSTANT_VARIANCE_THRESHOLD,
+    CORRELATION_THRESHOLD,
+    LOW_VARIANCE_THRESHOLD
+)
 
 try:
     from tensorflow.keras.models import Sequential
@@ -55,12 +64,21 @@ def run_lstm_fe(Y, indice, lag, lstm_units=64, dropout_rate=0.2):
     Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
     Y_engineered = handle_missing_values(Y_engineered, strategy='mean')
     
-    # Feature selection (reduce dimensionality for LSTM)
-    Y_engineered, _ = select_features_by_variance(Y_engineered, threshold=0.01)
+    # Apply 3-stage feature selection BEFORE embedding
+    # This is more efficient for LSTM (reduces memory usage)
+    Y_engineered, selection_info = apply_3stage_feature_selection(
+        Y_engineered,
+        constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
+        correlation_threshold=CORRELATION_THRESHOLD,
+        variance_threshold=LOW_VARIANCE_THRESHOLD * 2,  # Slightly more aggressive for LSTM
+        verbose=False
+    )
     
-    # Limit features for LSTM efficiency
-    if Y_engineered.shape[1] > 100:
-        Y_engineered = Y_engineered[:, :100]
+    # Limit features for LSTM efficiency (keep top ~200 features)
+    if Y_engineered.shape[1] > 200:
+        variances = np.var(Y_engineered, axis=0)
+        top_indices = np.argsort(variances)[-200:]
+        Y_engineered = Y_engineered[:, top_indices]
     
     # Create embedded matrix
     aux = embed(Y_engineered, 4 + lag)
