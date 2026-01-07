@@ -165,7 +165,7 @@ def run_bagg(Y, indice, lag, R=100, l=5):
 
 def bagg_rolling_window(Y, nprev, indice=1, lag=1):
     """
-    Rolling window Bagging forecasting.
+    Rolling window Bagging forecasting (PARALLELIZED).
     
     Parameters:
     -----------
@@ -188,19 +188,23 @@ def bagg_rolling_window(Y, nprev, indice=1, lag=1):
     save_nselect = np.full((nprev, n_features), np.nan)
     save_pred = np.full((nprev, 1), np.nan)
 
-    for i in range(nprev, 0, -1):
-        # Window selection
+    def _single_iteration(i):
         Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-
-        # Run Bagging model
         result = run_bagg(Y_window, indice, lag)
-
         idx = nprev - i
-        save_pred[idx, 0] = result['pred']
-        nselect = result['nselect']
+        return idx, result['pred'], result['nselect']
+    
+    print(f"Running {nprev} Bagging iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred, nselect in results:
+        save_pred[idx, 0] = pred
         save_nselect[idx, :len(nselect)] = nselect
-
-        print(f"iteration {idx + 1}")
+    
+    print(f"Completed {nprev} iterations.")
 
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed

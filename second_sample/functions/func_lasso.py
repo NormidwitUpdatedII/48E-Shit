@@ -24,10 +24,10 @@ class ICGlmnet:
     Supports penalty factors for adaptive methods.
     """
     
-    def __init__(self, alpha=1.0, n_lambdas=100, cv_folds=10):
+    def __init__(self, alpha=1.0, n_lambdas=100, cv_folds=5):
         self.alpha = alpha
         self.n_lambdas = n_lambdas
-        self.cv_folds = cv_folds
+        self.cv_folds = cv_folds  # Changed from 10 to 5 to match first_sample
         self.coef_ = None
         self.intercept_ = None
         self.bic_ = None
@@ -195,7 +195,7 @@ def run_lasso(Y, indice, lag, alpha=1, type_='lasso'):
 
 def lasso_rolling_window(Y, nprev, indice=1, lag=1, alpha=1, type_='lasso'):
     """
-    Rolling window forecasting with LASSO.
+    Rolling window forecasting with LASSO (PARALLELIZED).
     """
     Y = np.array(Y)
     n_obs = Y.shape[0]
@@ -206,19 +206,30 @@ def lasso_rolling_window(Y, nprev, indice=1, lag=1, alpha=1, type_='lasso'):
     save_coef = np.full((nprev, coef_size), np.nan)
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
+    # Helper function for parallel processing
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        
         result = run_lasso(Y_window, indice, lag, alpha, type_)
-        
-        coef = result['model']['coef']
+        idx = nprev - i
+        return idx, result['model']['coef'], result['pred']
+    
+    # Parallelize rolling window
+    N_JOBS = -1
+    print(f"Running {nprev} LASSO iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    # Aggregate results
+    for idx, coef, pred in results:
         if len(coef) <= coef_size:
-            save_coef[nprev - i, :len(coef)] = coef
-        save_pred[nprev - i, 0] = result['pred']
-        
-        print(f"iteration {nprev - i + 1}")
+            save_coef[idx, :len(coef)] = coef
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     real = Y[:, indice - 1]
     errors = calculate_errors(real[-nprev:], save_pred.flatten())

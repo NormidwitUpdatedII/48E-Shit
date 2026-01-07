@@ -132,7 +132,7 @@ def run_boost(Y, indice, lag):
 
 def boosting_rolling_window(Y, nprev, indice=1, lag=1):
     """
-    Rolling window Boosting forecasting.
+    Rolling window Boosting forecasting (PARALLELIZED).
     
     Parameters:
     -----------
@@ -155,19 +155,23 @@ def boosting_rolling_window(Y, nprev, indice=1, lag=1):
     save_coef = np.full((nprev, n_coef), np.nan)
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
-        # Window selection
+    def _single_iteration(i):
         Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-        
-        # Run Boosting model
         result = run_boost(Y_window, indice, lag)
-        
         idx = nprev - i
-        coef = result['coef']
+        return idx, result['pred'], result['coef']
+    
+    print(f"Running {nprev} Boosting iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred, coef in results:
         save_coef[idx, :len(coef)] = coef
-        save_pred[idx, 0] = result['pred']
-        
-        print(f"iteration {idx + 1}")
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed

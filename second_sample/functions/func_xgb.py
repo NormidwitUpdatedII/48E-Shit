@@ -17,9 +17,10 @@ from utils import embed, compute_pca_scores, calculate_errors
 # Number of parallel jobs (-1 = use all CPU cores)
 N_JOBS = -1
 
-def run_xgb(Y, indice, lag, n_estimators=100, max_depth=6, learning_rate=0.1):
+def run_xgb(Y, indice, lag):
     """
     Run XGBoost for inflation forecasting.
+    Parameters match R code: n_estimators=1000, eta=0.05, max_depth=4
     """
     Y = np.array(Y)
     n_obs = Y.shape[0]
@@ -43,12 +44,17 @@ def run_xgb(Y, indice, lag, n_estimators=100, max_depth=6, learning_rate=0.1):
     y = y[:(len(y) - lag + 1)]
     X = X[:(X.shape[0] - lag + 1), :]
     
+    # FIX: Use parameters matching R code and first_sample
     model = xgb.XGBRegressor(
-        n_estimators=n_estimators,
-        max_depth=max_depth,
-        learning_rate=learning_rate,
+        n_estimators=1000,          # Changed from 100 to 1000
+        learning_rate=0.05,         # Changed from 0.1 to 0.05 (eta)
+        max_depth=4,                # Changed from 6 to 4
+        colsample_bylevel=2/3,      # Added: match R code
+        subsample=1.0,              # Added: match R code
+        min_child_weight=X.shape[0] / 200,  # Added: match R code
         random_state=42,
-        verbosity=0
+        verbosity=0,
+        n_jobs=1                    # Added: match R code (nthread=1)
     )
     model.fit(X, y)
     
@@ -62,22 +68,34 @@ def run_xgb(Y, indice, lag, n_estimators=100, max_depth=6, learning_rate=0.1):
 
 def xgb_rolling_window(Y, nprev, indice=1, lag=1):
     """
-    Rolling window forecasting with XGBoost.
+    Rolling window forecasting with XGBoost (PARALLELIZED).
     """
     Y = np.array(Y)
     n_obs = Y.shape[0]
     
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
+    # Helper function for parallel processing
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        
         result = run_xgb(Y_window, indice, lag)
-        save_pred[nprev - i, 0] = result['pred']
-        
-        print(f"iteration {nprev - i + 1}")
+        idx = nprev - i
+        return idx, result['pred']
+    
+    # Parallelize rolling window
+    print(f"Running {nprev} XGBoost iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    # Aggregate results
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     real = Y[:, indice - 1]
     errors = calculate_errors(real[-nprev:], save_pred.flatten())

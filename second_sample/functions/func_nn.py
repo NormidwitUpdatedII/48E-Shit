@@ -91,22 +91,31 @@ def run_nn(Y, indice, lag, hidden_layers=[50, 50], epochs=100, dropout=0.2):
 
 def nn_rolling_window(Y, nprev, indice=1, lag=1):
     """
-    Rolling window forecasting with Neural Network.
+    Rolling window forecasting with Neural Network (PARALLELIZED).
     """
     Y = np.array(Y)
     n_obs = Y.shape[0]
     
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        
         result = run_nn(Y_window, indice, lag)
-        save_pred[nprev - i, 0] = result['pred']
-        
-        print(f"iteration {nprev - i + 1}")
+        idx = nprev - i
+        return idx, result['pred']
+    
+    print(f"Running {nprev} NN iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     real = Y[:, indice - 1]
     errors = calculate_errors(real[-nprev:], save_pred.flatten())

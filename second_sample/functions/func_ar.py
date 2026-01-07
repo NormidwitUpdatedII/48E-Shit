@@ -164,15 +164,24 @@ def ar_rolling_window(Y, nprev, indice=1, lag=1, type_='fixed'):
     
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        
         result = run_ar(Y_window, indice, lag, type_)
-        save_pred[nprev - i, 0] = result['pred']
-        
-        print(f"iteration {nprev - i + 1}")
+        idx = nprev - i
+        return idx, result['pred']
+    
+    print(f"Running {nprev} AR iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     # Calculate errors
     real = Y[:, indice - 1]

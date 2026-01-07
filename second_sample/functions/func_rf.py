@@ -17,9 +17,10 @@ from utils import embed, compute_pca_scores, calculate_errors
 # Number of parallel jobs (-1 = use all CPU cores)
 N_JOBS = -1
 
-def run_rf(Y, indice, lag, n_estimators=500, max_features='sqrt'):
+def run_rf(Y, indice, lag):
     """
     Run Random Forest for inflation forecasting with dummy variable.
+    Parameters match first_sample: n_estimators=500
     """
     Y = np.array(Y)
     n_obs = Y.shape[0]
@@ -46,11 +47,11 @@ def run_rf(Y, indice, lag, n_estimators=500, max_features='sqrt'):
     y = y[:(len(y) - lag + 1)]
     X = X[:(X.shape[0] - lag + 1), :]
     
-    # Fit Random Forest
+    # FIX: Match first_sample parameters
     model = RandomForestRegressor(
-        n_estimators=n_estimators,
-        max_features=max_features,
-        random_state=42
+        n_estimators=500,       # Fixed: consistent with first_sample
+        random_state=42,
+        n_jobs=-1               # Added: for internal parallelization
     )
     model.fit(X, y)
     
@@ -64,22 +65,34 @@ def run_rf(Y, indice, lag, n_estimators=500, max_features='sqrt'):
 
 def rf_rolling_window(Y, nprev, indice=1, lag=1):
     """
-    Rolling window forecasting with Random Forest.
+    Rolling window forecasting with Random Forest (PARALLELIZED).
     """
     Y = np.array(Y)
     n_obs = Y.shape[0]
     
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
+    # Helper function for parallel processing
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        
         result = run_rf(Y_window, indice, lag)
-        save_pred[nprev - i, 0] = result['pred']
-        
-        print(f"iteration {nprev - i + 1}")
+        idx = nprev - i
+        return idx, result['pred']
+    
+    # Parallelize rolling window
+    print(f"Running {nprev} RF iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    # Aggregate results
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     real = Y[:, indice - 1]
     errors = calculate_errors(real[-nprev:], save_pred.flatten())
