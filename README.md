@@ -7,7 +7,7 @@ A comprehensive Python implementation of the R codebase from **"Forecasting Infl
 This repository contains Python implementations of various machine learning and econometric methods for inflation forecasting using rolling window evaluation. The original R code has been faithfully converted to Python while maintaining the same structure and methodology.
 
 ### Key Features
-- **20+ forecasting methods** implemented (including LSTM, Neural Networks, XGBoost)
+- **21+ forecasting methods** implemented (including Random Walk benchmark, LSTM, Neural Networks, XGBoost)
 - **Rolling window evaluation** with configurable forecast horizons
 - **Two sample periods** for analysis (first-sample, second-sample)
 - **Advanced feature engineering** module (126 → 5,000+ features)
@@ -31,6 +31,7 @@ Naghiayik-python/
 │   ├── rawdata.csv           # Pre-processed FRED-MD data (502 rows)
 │   ├── rawdata_fe.csv        # Feature-engineered data (502×5061)
 │   ├── functions/            # Model function implementations
+│   │   ├── func_rw.py        # Random Walk (benchmark)
 │   │   ├── func_ar.py        # Autoregressive models
 │   │   ├── func_lasso.py     # LASSO regression
 │   │   ├── func_rf.py        # Random Forest
@@ -52,6 +53,7 @@ Naghiayik-python/
 │   │   ├── func_rffact.py    # Random Forest Factor
 │   │   └── __init__.py
 │   └── run/                  # Execution scripts
+│       ├── rw.py             # Run Random Walk (benchmark)
 │       ├── ar.py             # Run AR models
 │       ├── lasso.py          # Run LASSO
 │       ├── adalasso.py       # Run Adaptive LASSO
@@ -220,6 +222,11 @@ results = ar_main(data_path='first-sample/rawdata.rda', nprev=132)
 ```
 
 ## 📊 Methods Implemented
+
+### Benchmark Model
+| Method | Description | Function |
+|--------|-------------|----------|
+| Random Walk | Simple benchmark (no change forecast) | `func_rw.py` |
 
 ### Linear Methods
 | Method | Description | Function |
