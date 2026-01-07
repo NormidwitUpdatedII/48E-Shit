@@ -243,22 +243,26 @@ def flasso_rolling_window(Y, nprev, indice=1, lag=1, alpha=1, type_='lasso'):
     save_coef = np.full((nprev, coef_size), np.nan)
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
-        # Create window
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        
-        # Fit model
         result = run_flasso(Y_window, indice, lag, alpha, type_)
-        
-        # Store results
-        coef = result['model']['coef']
+        idx = nprev - i
+        return idx, result['pred'], result['model']['coef']
+    
+    print(f"Running {nprev} Flexible LASSO iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred, coef in results:
         if len(coef) <= coef_size:
-            save_coef[nprev - i, :len(coef)] = coef
-        save_pred[nprev - i, 0] = result['pred']
-        
-        print(f"iteration {nprev - i + 1}")
+            save_coef[idx, :len(coef)] = coef
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     # Calculate errors
     real = Y[:, indice - 1]

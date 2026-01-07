@@ -201,17 +201,24 @@ def rflasso_rolling_window(Y, nprev, indice=1, lag=1):
     
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
-        # Create window
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        
-        # Fit model
         pred = run_rflasso(Y_window, indice, lag)
-        save_pred[nprev - i, 0] = pred
-        
-        print(f"iteration {nprev - i + 1}")
+        idx = nprev - i
+        return idx, pred
+    
+    print(f"Running {nprev} RF-LASSO iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     # Calculate errors
     real = Y[:, indice - 1]

@@ -69,22 +69,31 @@ def run_rfols(Y, indice, lag, n_estimators=500, top_k=10):
 
 def rfols_rolling_window(Y, nprev, indice=1, lag=1):
     """
-    Rolling window forecasting with RF-OLS.
+    Rolling window forecasting with RF-OLS (PARALLELIZED).
     """
     Y = np.array(Y)
     n_obs = Y.shape[0]
     
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        
         result = run_rfols(Y_window, indice, lag)
-        save_pred[nprev - i, 0] = result['pred']
-        
-        print(f"iteration {nprev - i + 1}")
+        idx = nprev - i
+        return idx, result['pred']
+    
+    print(f"Running {nprev} RF-OLS iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     real = Y[:, indice - 1]
     errors = calculate_errors(real[-nprev:], save_pred.flatten())

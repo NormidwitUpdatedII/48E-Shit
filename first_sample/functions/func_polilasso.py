@@ -139,19 +139,23 @@ def polilasso_rolling_window(Y, nprev, indice=1, lag=1, alpha=1.0, model_type="l
     save_coef = np.full((nprev, n_coef), np.nan)
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
-        # Window selection
+    def _single_iteration(i):
         Y_window = Y[(nprev - i):(Y.shape[0] - i), :]
-        
-        # Run Polynomial LASSO model
         result = run_polilasso(Y_window, indice, lag, alpha, model_type)
-        
         idx = nprev - i
-        coef = result['model'].coef
+        return idx, result['pred'], result['model'].coef
+    
+    print(f"Running {nprev} Polynomial LASSO iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred, coef in results:
         save_coef[idx, :min(len(coef), n_coef)] = coef[:n_coef]
-        save_pred[idx, 0] = result['pred']
-        
-        print(f"iteration {idx + 1}")
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     # Calculate errors
     real = Y[:, indice - 1]  # Convert to 0-indexed

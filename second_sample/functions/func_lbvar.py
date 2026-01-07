@@ -62,7 +62,7 @@ class LBVAR:
 
 def lbvar_rw(Y, nprev, indice=1, lag=1, lambda_=0.1):
     """
-    Rolling window forecasting with LBVAR.
+    Rolling window forecasting with LBVAR (PARALLELIZED).
     """
     Y = np.array(Y)
     n_obs = Y.shape[0]
@@ -76,7 +76,7 @@ def lbvar_rw(Y, nprev, indice=1, lag=1, lambda_=0.1):
     
     save_pred = np.full((nprev, 1), np.nan)
     
-    for i in range(nprev, 0, -1):
+    def _single_iteration(i):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y_main[start_idx:end_idx, :]
@@ -84,14 +84,23 @@ def lbvar_rw(Y, nprev, indice=1, lag=1, lambda_=0.1):
         model = LBVAR(lag=lag, lambda_=lambda_)
         model.fit(Y_window)
         
-        # Create out-of-sample X
         aux = embed(Y_window, lag + 1)
         X_out = aux[-1, Y_window.shape[1]:]
         
         pred = model.predict(X_out.reshape(1, -1))
-        save_pred[nprev - i, 0] = pred[0, indice - 1]
-        
-        print(f"iteration {nprev - i + 1}")
+        idx = nprev - i
+        return idx, pred[0, indice - 1]
+    
+    print(f"Running {nprev} LBVAR iterations in parallel (N_JOBS={N_JOBS})...")
+    
+    results = Parallel(n_jobs=N_JOBS)(
+        delayed(_single_iteration)(i) for i in range(nprev, 0, -1)
+    )
+    
+    for idx, pred in results:
+        save_pred[idx, 0] = pred
+    
+    print(f"Completed {nprev} iterations.")
     
     real = Y_main[:, indice - 1]
     errors = calculate_errors(real[-nprev:], save_pred.flatten())
