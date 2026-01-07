@@ -7,6 +7,7 @@ detailed comparison reports with visualizations.
 
 Models Included:
 STANDARD MODELS (using rawdata.csv):
+- Random Walk (RW) - Benchmark model (lags 1, 4, 12)
 - AR (Autoregressive) with lags 1, 4, 12
 - BIC-selected AR with max lags 4, 12
 - LASSO (with lags 1, 4, 12)
@@ -67,6 +68,7 @@ print(f"\nReport Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 print("\nLoading model functions...")
 
 # Core models - FIRST SAMPLE
+from first_sample.functions.func_rw import rw_rolling_window as rw_rolling_window_first
 from first_sample.functions.func_ar import ar_rolling_window as ar_rolling_window_first
 from first_sample.functions.func_lasso import lasso_rolling_window as lasso_rolling_window_first
 from first_sample.functions.func_rf import rf_rolling_window as rf_rolling_window_first
@@ -84,6 +86,7 @@ from first_sample.functions.func_adalassorf import adalasso_rf_rolling_window as
 from first_sample.functions.func_polilasso import polilasso_rolling_window as polilasso_rolling_window_first
 
 # Core models - SECOND SAMPLE
+from second_sample.functions.func_rw import rw_rolling_window as rw_rolling_window_second
 from second_sample.functions.func_ar import ar_rolling_window as ar_rolling_window_second
 from second_sample.functions.func_lasso import lasso_rolling_window as lasso_rolling_window_second
 from second_sample.functions.func_rf import rf_rolling_window as rf_rolling_window_second
@@ -261,6 +264,7 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     is_first_sample = "First" in sample_name or "first" in sample_name
     
     # Select appropriate function set
+    rw_rolling_window = rw_rolling_window_first if is_first_sample else rw_rolling_window_second
     ar_rolling_window = ar_rolling_window_first if is_first_sample else ar_rolling_window_second
     lasso_rolling_window = lasso_rolling_window_first if is_first_sample else lasso_rolling_window_second
     rf_rolling_window = rf_rolling_window_first if is_first_sample else rf_rolling_window_second
@@ -290,6 +294,29 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     
     # Store actual values (will be same for all models)
     actual_values = None
+    
+    # =========================================================================
+    # Random Walk Models (lags 1-12) - Benchmark
+    # =========================================================================
+    print("\n--- Random Walk Models (Benchmark) ---")
+    for lag in [1, 4, 12]:  # Key lags
+        print(f"  Running RW(lag={lag})...", end=" ")
+        res = run_model_safely(rw_rolling_window, Y, nprev, indice, lag, f'RW({lag})')
+        print(f"RMSE: {res['rmse']:.6f}" if res['success'] else f"FAILED: {res['error']}")
+        results.append({
+            'Model': f'RW({lag})',
+            'Category': 'Random Walk',
+            'Lag': lag,
+            'RMSE': res['rmse'],
+            'MAE': res['mae'],
+            'Success': res['success'],
+            'Time(s)': res['time']
+        })
+        # Store forecast data
+        if res['success'] and res['pred'] is not None:
+            forecast_data[f'RW({lag})'] = {'pred': res['pred'], 'real': res['real']}
+            if actual_values is None and res['real'] is not None:
+                actual_values = res['real']
     
     # =========================================================================
     # AR Models (lags 1-12)
