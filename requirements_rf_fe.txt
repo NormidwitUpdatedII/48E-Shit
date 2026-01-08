@@ -1,0 +1,26 @@
+# Requirements for RF-FE Multi-Period Forecasting
+# =================================================
+# This file contains all dependencies needed to run run_rf_fe_multi_period.py
+
+# Core Scientific Computing
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+
+# Machine Learning
+scikit-learn>=1.3.0
+
+# Parallel Processing
+joblib>=1.3.0
+
+# Optional but Recommended
+tqdm>=4.65.0
+
+# Statistical Analysis (for stationarity tests if needed)
+statsmodels>=0.14.0
+
+# Note: You do NOT need the following for this script:
+# - xgboost
+# - tensorflow
+# - pyreadr
+# - matplotlib (unless you want to add plotting)
