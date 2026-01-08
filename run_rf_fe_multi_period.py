@@ -78,8 +78,9 @@ FORECAST_HORIZON = 12  # 12-month ahead forecast
 CPI_COLUMN = 'CPIAUCSL'  # Consumer Price Index for All Urban Consumers
 PCE_COLUMN = 'PCEPI'     # Personal Consumption Expenditures Price Index
 
-# Number of parallel jobs
-N_JOBS = -1
+# Number of parallel jobs (reduced to prevent memory issues)
+# Use -1 for all cores only if you have >32GB RAM
+N_JOBS = 4  # Process 4 forecasts at a time to avoid OOM
 
 # Output directory
 OUTPUT_DIR = SCRIPT_DIR / 'results' / 'multi_period_rf_fe'
@@ -338,17 +339,31 @@ def rolling_forecast_for_period(train_data, test_data, target_col_idx, lag, targ
         # Return actual index for date tracking
         return result['pred'], actual, result['n_features'], actual_idx
     
-    # Run parallel forecasting
+    # Run parallel forecasting with batch processing to prevent memory issues
     start_time = time.time()
     
     # We need at least lag observations to make a forecast
     n_forecasts = n_test - lag + 1
     
-    print(f"  Running {n_forecasts} forecasts in parallel...")
+    print(f"  Running {n_forecasts} forecasts in batches (n_jobs={N_JOBS})...")
     
-    results = Parallel(n_jobs=N_JOBS)(
-        delayed(process_iteration)(i) for i in range(1, n_forecasts + 1)
-    )
+    # Process in batches to avoid memory overload
+    batch_size = 24  # Process 2 years at a time
+    all_results = []
+    
+    for batch_start in range(1, n_forecasts + 1, batch_size):
+        batch_end = min(batch_start + batch_size, n_forecasts + 1)
+        batch_num = (batch_start - 1) // batch_size + 1
+        total_batches = (n_forecasts + batch_size - 1) // batch_size
+        
+        print(f"    Batch {batch_num}/{total_batches}: forecasts {batch_start} to {batch_end-1}")
+        
+        batch_results = Parallel(n_jobs=N_JOBS)(
+            delayed(process_iteration)(i) for i in range(batch_start, batch_end)
+        )
+        all_results.extend(batch_results)
+    
+    results = all_results
     
     # Extract results
     predictions = [r[0] for r in results]
