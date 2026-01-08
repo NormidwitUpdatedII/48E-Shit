@@ -256,6 +256,13 @@ def run_rf_fe(Y, target_col_idx, lag):
     # Apply selection to out-of-sample
     X_out = X_out[selection_info['combined_mask']]
     
+    # Validate feature selection didn't remove all features
+    if X.shape[1] == 0:
+        raise ValueError(
+            f"All features removed by 3-stage selection. "
+            f"Consider relaxing thresholds."
+        )
+    
     # Standardize
     X, scaler = standardize_features(X)
     X_out = scaler.transform(X_out.reshape(1, -1))
@@ -296,8 +303,17 @@ def rolling_forecast_for_period(train_data, test_data, target_col_idx, lag, targ
     dict : Results with predictions, actuals, errors
     """
     n_test = len(test_data)
+    
+    # Validate test period has sufficient data
+    if n_test < lag:
+        raise ValueError(
+            f"Test period too short for {target_name}: "
+            f"{n_test} observations < forecast horizon {lag} months"
+        )
+    
     predictions = []
     actuals = []
+    forecast_dates = []
     
     print(f"\n  Rolling forecast for {target_name}")
     print(f"  Test observations: {n_test}")
@@ -319,7 +335,8 @@ def rolling_forecast_for_period(train_data, test_data, target_col_idx, lag, targ
         else:
             actual = np.nan
         
-        return result['pred'], actual, result['n_features']
+        # Return actual index for date tracking
+        return result['pred'], actual, result['n_features'], actual_idx
     
     # Run parallel forecasting
     start_time = time.time()
@@ -337,6 +354,7 @@ def rolling_forecast_for_period(train_data, test_data, target_col_idx, lag, targ
     predictions = [r[0] for r in results]
     actuals = [r[1] for r in results]
     n_features_used = results[0][2]  # Features from first iteration
+    forecast_indices = [r[3] for r in results]  # Actual indices in test data
     
     elapsed = time.time() - start_time
     print(f"  Completed in {elapsed:.1f} seconds")
@@ -346,6 +364,11 @@ def rolling_forecast_for_period(train_data, test_data, target_col_idx, lag, targ
     valid_mask = ~np.isnan(actuals)
     predictions = np.array(predictions)[valid_mask]
     actuals = np.array(actuals)[valid_mask]
+    forecast_indices = np.array(forecast_indices)[valid_mask]
+    
+    # Validate we have results
+    if len(predictions) == 0:
+        raise ValueError(f"No valid forecasts generated for {target_name}")
     
     # Calculate errors
     errors = calculate_errors(actuals, predictions)
@@ -359,7 +382,8 @@ def rolling_forecast_for_period(train_data, test_data, target_col_idx, lag, targ
         'actuals': actuals,
         'errors': errors,
         'n_features': n_features_used,
-        'time': elapsed
+        'time': elapsed,
+        'forecast_indices': forecast_indices.astype(int)
     }
 
 
@@ -560,8 +584,8 @@ def save_results(results, output_dir):
             res = results[target][period]
             period_dates = results['periods'][period]['dates']
             
-            # Get forecast dates (accounting for lag)
-            forecast_dates = period_dates[FORECAST_HORIZON-1:FORECAST_HORIZON-1+len(res['predictions'])]
+            # Get forecast dates using tracked indices
+            forecast_dates = period_dates[res['forecast_indices']]
             
             df = pd.DataFrame({
                 'Date': forecast_dates,
@@ -589,10 +613,17 @@ def save_results(results, output_dir):
         f.write("=" * 70 + "\n\n")
         f.write(f"Run Time: {results['metadata']['run_time']}\n")
         f.write(f"Data Path: {results['metadata']['data_path']}\n")
-        f.write(f"Training Period: Start - {results['metadata']['train_end']}\n")
-        f.write(f"Test Period 1: {results['metadata']['test1_start']} - {results['metadata']['test1_end']}\n")
-        f.write(f"Test Period 2: {results['metadata']['test1_end']} - {results['metadata']['test2_end']}\n")
-        f.write(f"Test Period 3: {results['metadata']['test2_end']} - {results['metadata']['test3_end']}\n")
+        
+        # Use actual period dates from data
+        train_dates = results['periods']['train']['dates']
+        test1_dates = results['periods']['test1']['dates']
+        test2_dates = results['periods']['test2']['dates']
+        test3_dates = results['periods']['test3']['dates']
+        
+        f.write(f"Training Period: {train_dates[0].strftime('%Y-%m-%d')} - {train_dates[-1].strftime('%Y-%m-%d')}\n")
+        f.write(f"Test Period 1: {test1_dates[0].strftime('%Y-%m-%d')} - {test1_dates[-1].strftime('%Y-%m-%d')}\n")
+        f.write(f"Test Period 2: {test2_dates[0].strftime('%Y-%m-%d')} - {test2_dates[-1].strftime('%Y-%m-%d')}\n")
+        f.write(f"Test Period 3: {test3_dates[0].strftime('%Y-%m-%d')} - {test3_dates[-1].strftime('%Y-%m-%d')}\n")
         f.write(f"Forecast Horizon: {results['metadata']['forecast_horizon']} months\n\n")
         f.write("Random Forest Parameters:\n")
         for key, val in results['metadata']['rf_params'].items():
