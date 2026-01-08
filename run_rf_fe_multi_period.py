@@ -112,7 +112,7 @@ def load_data_with_dates(data_path):
     
     # Apply FRED-MD transformations
     print("Applying FRED-MD stationarity transformations...")
-    transformed_df = loader.transform_all_variables()
+    transformed_df = loader.transform_data()
     
     # Extract data matrix and dates
     dates = transformed_df.index
