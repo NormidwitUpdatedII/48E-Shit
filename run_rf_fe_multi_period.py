@@ -274,8 +274,7 @@ def run_rf_fe(Y, target_col_idx, lag):
     }
 
 
-def rolling_forecast_for_period(train_data, test_data, indice, lag, target_name):
-    """target_col_idx, lag, target_name):
+def rolling_forecast_for_period(train_data, test_data, target_col_idx, lag, target_name):
     """
     Perform rolling window forecasting for a test period.
     
@@ -316,7 +315,8 @@ def rolling_forecast_for_period(train_data, test_data, indice, lag, target_name)
         # Actual value (lag periods ahead from current window end)
         actual_idx = i + lag - 1
         if actual_idx < n_test:
-            actual = test_data[actual_idx, target_col_idx
+            actual = test_data[actual_idx, target_col_idx]
+        else:
             actual = np.nan
         
         return result['pred'], actual, result['n_features']
@@ -410,7 +410,20 @@ def run_multi_period_analysis(data_path, train_end='1990-12-31',
         raise ValueError(
             f"Could not find target variables in data. "
             f"Looking for '{CPI_COLUMN}' and '{PCE_COLUMN}' in columns: {column_names[:10]}..."
-        )f"FORECASTING CPI INFLATION ({CPI_COLUMN})")
+        )
+    
+    # Split into periods
+    periods = split_data_by_period(data_matrix, dates, train_end, test1_start, test1_end, test2_end, test3_end)
+    
+    # Store results
+    results = {
+        'CPI': {'test1': None, 'test2': None, 'test3': None},
+        'PCE': {'test1': None, 'test2': None, 'test3': None}
+    }
+    
+    # Run for CPI
+    print(f"\n{'='*70}")
+    print(f"FORECASTING CPI INFLATION ({CPI_COLUMN})")
     print(f"{'='*70}")
     
     print("\n--- Test Period 1: 2000-2016 ---")
@@ -473,20 +486,7 @@ def run_multi_period_analysis(data_path, train_end='1990-12-31',
     results['PCE']['test3'] = rolling_forecast_for_period(
         train_extended2,
         periods['test3']['data'],
-        pce_idx]['test2'] = rolling_forecast_for_period(
-        train_extended1,
-        periods['test2']['data'],
-        PCE_INDEX,
-        FORECAST_HORIZON,
-        'PCE'
-    )
-    
-    print("\n--- Test Period 3: 2022-2023 ---")
-    train_extended2 = np.vstack([train_extended1, periods['test2']['data']])
-    results['PCE']['test3'] = rolling_forecast_for_period(
-        train_extended2,
-        periods['test3']['data'],
-        PCE_INDEX,
+        pce_idx,
         FORECAST_HORIZON,
         'PCE'
     )
@@ -609,7 +609,9 @@ def save_results(results, output_dir):
 # ==============================================================================
 
 def main():
-    ""Use the main FRED-MD data file
+    """Main execution function."""
+    
+    # Use the main FRED-MD data file
     data_path = SCRIPT_DIR / 'data' / '2025-11-MD.csv'
     
     if not data_path.exists():
@@ -618,9 +620,7 @@ def main():
             f"Please ensure '2025-11-MD.csv' exists in the 'data/' directory."
         )
     
-    print(f"Using FRED-MD data: {data_path}
-    else:
-        raise FileNotFoundError("No data file found in first_sample or second_sample directories")
+    print(f"Using FRED-MD data: {data_path}")
     
     # Run analysis
     try:
