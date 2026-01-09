@@ -50,48 +50,64 @@ N_JOBS_LSTM = 2
 
 
 def run_lstm_fe(Y, indice, lag, lstm_units=64, dropout_rate=0.2):
+    """Run LSTM with Feature Engineering (OPTIMIZED).
+    
+    OPTIMIZATION: Only lag raw features, not engineered features.
+    Reduces features from ~20,000 to ~5,000, then to ~200 for LSTM efficiency.
+    """
     if not KERAS_AVAILABLE:
         raise ImportError("TensorFlow/Keras required")
     
     indice = indice - 1
     Y = np.array(Y)
+    n_raw_features = Y.shape[1]
+    
+    # OPTIMIZATION: Separate raw lagging from feature engineering
+    aux_raw = embed(Y, 4)
     
     fe = StationaryFeatureEngineer()
-    Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
-    Y_engineered = handle_missing_values(Y_engineered, strategy='mean')
+    Y_engineered = fe.get_all_features(Y, include_raw=False, skip_basic_transforms=True)
+    Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
     
-    # Apply 3-stage feature selection BEFORE embedding
-    Y_engineered, selection_info = apply_3stage_feature_selection(
-        Y_engineered,
+    min_len = min(len(aux_raw), len(Y_engineered))
+    aux_raw = aux_raw[:min_len]
+    Y_eng_current = Y_engineered[:min_len]
+    
+    y_target = embed(Y[:, indice].reshape(-1, 1), 4)[:, 0]
+    y_target = y_target[:min_len]
+    
+    if lag == 1:
+        X_raw_lagged = aux_raw
+    else:
+        lag_start = n_raw_features * (lag - 1)
+        lag_end = lag_start + (n_raw_features * 4)
+        if lag_end <= aux_raw.shape[1]:
+            X_raw_lagged = aux_raw[:, lag_start:lag_end]
+        else:
+            X_raw_lagged = aux_raw[:, lag_start:]
+    
+    X = np.hstack([X_raw_lagged, Y_eng_current])
+    X_out = X[-1, :]
+    
+    y = y_target[:len(y_target) - lag + 1]
+    X = X[:X.shape[0] - lag + 1, :]
+    
+    # Feature selection for LSTM efficiency
+    X, selection_info = apply_3stage_feature_selection(
+        X,
         constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
         correlation_threshold=CORRELATION_THRESHOLD,
         variance_threshold=LOW_VARIANCE_THRESHOLD * 2,
         verbose=False
     )
+    X_out = X_out[selection_info['combined_mask']]
     
     # Limit features for LSTM efficiency (keep top ~200 features)
-    if Y_engineered.shape[1] > 200:
-        variances = np.var(Y_engineered, axis=0)
+    if X.shape[1] > 200:
+        variances = np.var(X, axis=0)
         top_indices = np.argsort(variances)[-200:]
-        Y_engineered = Y_engineered[:, top_indices]
-    
-    aux = embed(Y_engineered, 4 + lag)
-    y_target = embed(Y[:, indice].reshape(-1, 1), 4 + lag)[:, 0]
-    
-    min_len = min(len(aux), len(y_target))
-    aux, y_target = aux[:min_len], y_target[:min_len]
-    
-    n_cols = Y_engineered.shape[1]
-    X = aux[:, n_cols * lag:]
-    
-    if lag == 1:
-        X_out = aux[-1, :X.shape[1]]
-    else:
-        aux_trimmed = aux[:, :aux.shape[1] - n_cols * (lag - 1)]
-        X_out = aux_trimmed[-1, :X.shape[1]]
-    
-    y = y_target[:len(y_target) - lag + 1]
-    X = X[:X.shape[0] - lag + 1, :]
+        X = X[:, top_indices]
+        X_out = X_out[top_indices]
     
     X_mean, X_std = X.mean(axis=0), X.std(axis=0)
     X_std[X_std == 0] = 1

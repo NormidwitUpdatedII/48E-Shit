@@ -52,52 +52,72 @@ N_JOBS_LSTM = 2  # Use fewer workers for LSTM due to memory constraints
 
 
 def run_lstm_fe(Y, indice, lag, lstm_units=64, dropout_rate=0.2):
-    """Run LSTM with Feature Engineering."""
+    """Run LSTM with Feature Engineering (OPTIMIZED).
+    
+    OPTIMIZATION: Only lag raw features, not engineered features.
+    Reduces features from ~20,000 to ~5,000, then to ~200 for LSTM efficiency.
+    """
     if not KERAS_AVAILABLE:
         raise ImportError("TensorFlow/Keras required")
     
     indice = indice - 1
     Y = np.array(Y)
+    n_raw_features = Y.shape[1]
     
-    # Apply feature engineering (skip basic transforms - data already transformed)
+    # OPTIMIZATION: Separate raw lagging from feature engineering
+    # Step 1: Create lags of RAW features only
+    aux_raw = embed(Y, 4)
+    
+    # Step 2: Engineer features on CURRENT data (no lags)
     fe = StationaryFeatureEngineer()
-    Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
-    Y_engineered = handle_missing_values(Y_engineered, strategy='mean')
+    Y_engineered = fe.get_all_features(Y, include_raw=False, skip_basic_transforms=True)
+    Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
     
-    # Apply 3-stage feature selection BEFORE embedding
-    # This is more efficient for LSTM (reduces memory usage)
-    Y_engineered, selection_info = apply_3stage_feature_selection(
-        Y_engineered,
-        constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
-        correlation_threshold=CORRELATION_THRESHOLD,
-        variance_threshold=LOW_VARIANCE_THRESHOLD * 2,  # Slightly more aggressive for LSTM
-        verbose=False
-    )
+    # Step 3: Align lengths
+    min_len = min(len(aux_raw), len(Y_engineered))
+    aux_raw = aux_raw[:min_len]
+    Y_eng_current = Y_engineered[:min_len]
     
-    # Limit features for LSTM efficiency (keep top ~200 features)
-    if Y_engineered.shape[1] > 200:
-        variances = np.var(Y_engineered, axis=0)
-        top_indices = np.argsort(variances)[-200:]
-        Y_engineered = Y_engineered[:, top_indices]
+    # Step 4: Create target
+    y_target = embed(Y[:, indice].reshape(-1, 1), 4)[:, 0]
+    y_target = y_target[:min_len]
     
-    # Create embedded matrix
-    aux = embed(Y_engineered, 4 + lag)
-    y_target = embed(Y[:, indice].reshape(-1, 1), 4 + lag)[:, 0]
-    
-    min_len = min(len(aux), len(y_target))
-    aux, y_target = aux[:min_len], y_target[:min_len]
-    
-    n_cols = Y_engineered.shape[1]
-    X = aux[:, n_cols * lag:]
-    
+    # Step 5: Build feature matrix
     if lag == 1:
-        X_out = aux[-1, :X.shape[1]]
+        X_raw_lagged = aux_raw
     else:
-        aux_trimmed = aux[:, :aux.shape[1] - n_cols * (lag - 1)]
-        X_out = aux_trimmed[-1, :X.shape[1]]
+        lag_start = n_raw_features * (lag - 1)
+        lag_end = lag_start + (n_raw_features * 4)
+        if lag_end <= aux_raw.shape[1]:
+            X_raw_lagged = aux_raw[:, lag_start:lag_end]
+        else:
+            X_raw_lagged = aux_raw[:, lag_start:]
     
+    # Step 6: Combine lagged raw + current engineered
+    X = np.hstack([X_raw_lagged, Y_eng_current])
+    X_out = X[-1, :]
+    
+    # Step 7: Adjust for forecast horizon
     y = y_target[:len(y_target) - lag + 1]
     X = X[:X.shape[0] - lag + 1, :]
+    
+    # Step 8: Feature selection for LSTM efficiency
+    # Apply 3-stage selection first
+    X, selection_info = apply_3stage_feature_selection(
+        X,
+        constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
+        correlation_threshold=CORRELATION_THRESHOLD,
+        variance_threshold=LOW_VARIANCE_THRESHOLD * 2,
+        verbose=False
+    )
+    X_out = X_out[selection_info['combined_mask']]
+    
+    # Limit features for LSTM efficiency (keep top ~200 features)
+    if X.shape[1] > 200:
+        variances = np.var(X, axis=0)
+        top_indices = np.argsort(variances)[-200:]
+        X = X[:, top_indices]
+        X_out = X_out[top_indices]
     
     # Standardize
     X_mean, X_std = X.mean(axis=0), X.std(axis=0)
@@ -129,9 +149,7 @@ def run_lstm_fe(Y, indice, lag, lstm_units=64, dropout_rate=0.2):
     ])
     
     model.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
-    
     early_stop = EarlyStopping(monitor='loss', patience=10, restore_best_weights=True)
-    
     model.fit(X_lstm, y, epochs=100, batch_size=16, verbose=0, callbacks=[early_stop])
     
     pred = model.predict(X_out_lstm, verbose=0)[0, 0]

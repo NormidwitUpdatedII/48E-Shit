@@ -42,8 +42,8 @@ except ImportError:
 from joblib import Parallel, delayed
 
 
-# Number of parallel jobs (-1 = use all CPU cores)
-N_JOBS = -1
+# Number of parallel jobs (4 for stability, prevents OOM)
+N_JOBS = 4
 
 # Optimized XGBoost parameters
 XGB_PARAMS = {
@@ -60,7 +60,10 @@ XGB_PARAMS = {
 
 def run_xgb_fe(Y, indice, lag):
     """
-    Run XGBoost with Feature Engineering.
+    Run XGBoost with Feature Engineering (OPTIMIZED).
+    
+    OPTIMIZATION: Only lag raw features, not engineered features.
+    Reduces features from ~20,000 to ~5,000 (75% reduction).
     
     Parameters:
     -----------
@@ -80,47 +83,56 @@ def run_xgb_fe(Y, indice, lag):
     
     indice = indice - 1  # Convert to 0-indexed
     Y = np.array(Y)
+    n_raw_features = Y.shape[1]
     
-    # Apply feature engineering (skip basic transforms - data already transformed)
+    # OPTIMIZATION: Separate raw lagging from feature engineering
+    # Step 1: Create lags of RAW features only (126 vars × 4 lags = 504 features)
+    aux_raw = embed(Y, 4)
+    
+    # Step 2: Engineer features on CURRENT data (no lags)
     fe = StationaryFeatureEngineer()
-    Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
+    Y_engineered = fe.get_all_features(Y, include_raw=False, skip_basic_transforms=True)
     
     # Handle NaN values
-    Y_engineered = handle_missing_values(Y_engineered, strategy='mean')
+    Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
     
-    # Create embedded matrix with lags
-    aux = embed(Y_engineered, 4 + lag)
+    # Step 3: Align lengths
+    min_len = min(len(aux_raw), len(Y_engineered))
+    aux_raw = aux_raw[:min_len]
+    Y_eng_current = Y_engineered[:min_len]
     
-    # Target is from original Y
-    y_target = embed(Y[:, indice].reshape(-1, 1), 4 + lag)[:, 0]
-    
-    # Align dimensions
-    min_len = min(len(aux), len(y_target))
-    aux = aux[:min_len]
+    # Step 4: Create target from original Y
+    y_target = embed(Y[:, indice].reshape(-1, 1), 4)[:, 0]
     y_target = y_target[:min_len]
     
-    # Features (lagged values)
-    n_cols = Y_engineered.shape[1]
-    X = aux[:, n_cols * lag:]
-    
-    # Out-of-sample features
+    # Step 5: Build feature matrix based on forecast horizon
     if lag == 1:
-        X_out = aux[-1, :X.shape[1]]
+        X_raw_lagged = aux_raw
     else:
-        aux_trimmed = aux[:, :aux.shape[1] - n_cols * (lag - 1)]
-        X_out = aux_trimmed[-1, :X.shape[1]]
+        lag_start = n_raw_features * (lag - 1)
+        lag_end = lag_start + (n_raw_features * 4)
+        
+        if lag_end <= aux_raw.shape[1]:
+            X_raw_lagged = aux_raw[:, lag_start:lag_end]
+        else:
+            X_raw_lagged = aux_raw[:, lag_start:]
     
-    # Adjust for lag
+    # Step 6: Combine lagged raw + current engineered
+    # Total: ~504 lagged + ~4,410 current = ~4,914 features (vs 20,000!)
+    X = np.hstack([X_raw_lagged, Y_eng_current])
+    X_out = X[-1, :]
+    
+    # Step 7: Adjust for forecast horizon
     y = y_target[:len(y_target) - lag + 1]
     X = X[:X.shape[0] - lag + 1, :]
     
-    # Apply 3-stage feature selection (5061 → ~3500-4000)
+    # Apply 3-stage feature selection (now much faster!)
     X, selection_info = apply_3stage_feature_selection(
         X, 
         constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
         correlation_threshold=CORRELATION_THRESHOLD,
         variance_threshold=LOW_VARIANCE_THRESHOLD,
-        verbose=False  # Set to True for debugging
+        verbose=False
     )
     
     # Apply selection mask to out-of-sample features
