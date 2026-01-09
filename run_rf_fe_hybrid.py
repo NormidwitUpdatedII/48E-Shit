@@ -25,7 +25,14 @@ from joblib import Parallel, delayed
 
 # --- Configuration ---
 warnings.filterwarnings('ignore')
-SCRIPT_DIR = Path(__file__).parent
+
+# Handle both script and notebook environments
+try:
+    SCRIPT_DIR = Path(__file__).parent
+except NameError:
+    # Running in Kaggle/Jupyter notebook
+    SCRIPT_DIR = Path.cwd()
+
 sys.path.insert(0, str(SCRIPT_DIR))
 
 CPI_COLUMN = 'CPIAUCSL'
@@ -195,7 +202,7 @@ def run_rf_fe_hybrid(Y_raw_matrix, target_name, lag, raw_column_names):
     num_k = min(MAX_FEATURES, X.shape[1])
     if X.shape[1] > num_k:
         selector = SelectKBest(score_func=f_regression, k=num_k)
-        selector.fit(X[:-1], y)  # Fit on training data only
+        selector.fit(X[:-1], y[:-1])  # FIX: Both X and y trimmed to match lengths
         X_screened = X[:, selector.get_support()]
     else:
         X_screened = X
