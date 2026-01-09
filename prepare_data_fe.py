@@ -121,10 +121,10 @@ def prepare_first_sample(fred_md_path=None, output_dir=None, apply_fe=True, use_
         # skip_basic_transforms=True because data is already FRED-MD transformed
         features = fe.get_all_features(data, include_raw=True, skip_basic_transforms=True)
         
-        # Handle NaN - use forward fill to avoid data leakage
-        # Forward fill uses only past values, not future values
+        # Handle NaN - use forward fill only (past data) to avoid data leakage
+        # Fill remaining NaN with 0 instead of backward fill (which would leak future data)
         df_features = pd.DataFrame(features)
-        features = df_features.fillna(method='ffill').fillna(method='bfill').values
+        features = df_features.fillna(method='ffill').fillna(0).values
         
         print(f"  Original features: {data.shape[1]}")
         print(f"  Engineered features: {features.shape[1]}")
@@ -209,10 +209,10 @@ def prepare_second_sample(fred_md_path=None, output_dir=None, apply_fe=True, use
         # skip_basic_transforms=True because data is already FRED-MD transformed
         features = fe.get_all_features(data, include_raw=True, skip_basic_transforms=True)
         
-        # Handle NaN - use forward fill to avoid data leakage
-        # Forward fill uses only past values, not future values
+        # Handle NaN - use forward fill only (past data) to avoid data leakage
+        # Fill remaining NaN with 0 instead of backward fill (which would leak future data)
         df_features = pd.DataFrame(features)
-        features = df_features.fillna(method='ffill').fillna(method='bfill').values
+        features = df_features.fillna(method='ffill').fillna(0).values
         
         print(f"  Original features: {data.shape[1]}")
         print(f"  Engineered features: {features.shape[1]}")

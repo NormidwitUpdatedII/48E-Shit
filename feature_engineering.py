@@ -103,12 +103,13 @@ def calculate_rolling_statistics(series, windows=None):
     for w in windows:
         # Use .shift(1) to exclude current observation
         # At time t, uses data from [t-w, t-1] (past only)
-        stats[f'mean_{w}'] = series.rolling(window=w, min_periods=1).mean().shift(1)
-        stats[f'std_{w}'] = series.rolling(window=w, min_periods=1).std().shift(1)
-        stats[f'max_{w}'] = series.rolling(window=w, min_periods=1).max().shift(1)
-        stats[f'min_{w}'] = series.rolling(window=w, min_periods=1).min().shift(1)
+        # Use min_periods=w to ensure stable features with sufficient historical data
+        stats[f'mean_{w}'] = series.rolling(window=w, min_periods=w).mean().shift(1)
+        stats[f'std_{w}'] = series.rolling(window=w, min_periods=w).std().shift(1)
+        stats[f'max_{w}'] = series.rolling(window=w, min_periods=w).max().shift(1)
+        stats[f'min_{w}'] = series.rolling(window=w, min_periods=w).min().shift(1)
         stats[f'range_{w}'] = stats[f'max_{w}'] - stats[f'min_{w}']
-        stats[f'skew_{w}'] = series.rolling(window=w, min_periods=2).skew().shift(1)  # Need at least 2 for skew
+        stats[f'skew_{w}'] = series.rolling(window=w, min_periods=w).skew().shift(1)
     
     return stats
 
@@ -141,7 +142,7 @@ def calculate_momentum_features(series, horizons=None):
         momentum[f'roc_{h}'] = series.pct_change(h).shift(1)
         # Acceleration (second derivative)
         momentum[f'acc_{h}'] = series.diff(h).diff(h).shift(1)
-        # Momentum (current vs h periods ago)
+        # Momentum (t-1 vs t-h-1, shifted to avoid current observation)
         momentum[f'mom_{h}'] = (series - series.shift(h)).shift(1)
     
     return momentum
@@ -174,11 +175,12 @@ def calculate_volatility_features(series, windows=None):
     
     for w in windows:
         # Standard deviation of returns (past data only)
-        vol[f'vol_{w}'] = returns.rolling(window=w, min_periods=1).std().shift(1)
+        # Use min_periods=w for stable features
+        vol[f'vol_{w}'] = returns.rolling(window=w, min_periods=w).std().shift(1)
         # Realized volatility (sum of squared returns)
-        vol[f'realized_vol_{w}'] = (returns ** 2).rolling(window=w, min_periods=1).sum().shift(1).apply(np.sqrt)
+        vol[f'realized_vol_{w}'] = (returns ** 2).rolling(window=w, min_periods=w).sum().shift(1).apply(np.sqrt)
         # Volatility of volatility
-        vol[f'vol_of_vol_{w}'] = vol[f'vol_{w}'].rolling(window=w, min_periods=1).std().shift(1)
+        vol[f'vol_of_vol_{w}'] = vol[f'vol_{w}'].rolling(window=w, min_periods=w).std().shift(1)
     
     return vol
 
@@ -464,7 +466,7 @@ class StationaryFeatureEngineer:
         if n_cols >= 2:
             series1 = pd.Series(Y[:, 0])
             series2 = pd.Series(Y[:, 1])
-            rolling_corr = series1.rolling(12).corr(series2).shift(1)
+            rolling_corr = series1.rolling(window=12, min_periods=12).corr(series2).shift(1)
             transforms.append(rolling_corr.values)
         
         if transforms:
@@ -588,65 +590,13 @@ def engineer_features_for_model(Y, include_raw=True, handle_nan='fill', skip_bas
     return features
 
 
-def apply_feature_engineering_to_rolling_window(Y_train, Y_test_row, include_raw=True, skip_basic_transforms=True):
-    """
-    **DEPRECATED - CAUSES DATA LEAKAGE**
-    
-    This function has been deprecated because it combines train and test data
-    before applying feature engineering, which causes data leakage through:
-    1. Rolling statistics that see test data
-    2. Missing value imputation using test data statistics
-    
-    Instead, use:
-    1. Create features on train data only
-    2. Store feature parameters (e.g., imputation values)
-    3. Apply same parameters to test data separately
-    
-    This function is kept for backwards compatibility but will raise a warning.
-    
-    Parameters:
-    -----------
-    Y_train : np.ndarray
-        Training data matrix (FRED-MD transformed)
-    Y_test_row : np.ndarray
-        Single test observation (1D array)
-    include_raw : bool
-        Whether to include original features
-    skip_basic_transforms : bool
-        Skip basic transforms since data is already transformed (default: True)
-    
-    Returns:
-    --------
-    tuple : (X_train_engineered, X_test_engineered)
-    """
-    import warnings
-    warnings.warn(
-        "apply_feature_engineering_to_rolling_window is DEPRECATED and causes DATA LEAKAGE. "
-        "Use separate feature engineering for train and test data.",
-        DeprecationWarning,
-        stacklevel=2
-    )
-    
-    fe = StationaryFeatureEngineer()
-    
-    # Combine for consistent transformation (THIS IS THE LEAKAGE!)
-    Y_combined = np.vstack([Y_train, Y_test_row.reshape(1, -1)])
-    
-    # Engineer features (skip basic transforms by default)
-    features_combined = fe.get_all_features(Y_combined, include_raw=include_raw, 
-                                            skip_basic_transforms=skip_basic_transforms)
-    
-    # Handle NaN - using train mean only (partial fix, but still has leakage in rolling stats)
-    col_means = np.nanmean(features_combined[:-1], axis=0)  # Mean from train only
-    col_means = np.where(np.isnan(col_means), 0, col_means)
-    inds = np.where(np.isnan(features_combined))
-    features_combined[inds] = np.take(col_means, inds[1])
-    
-    # Split back
-    X_train = features_combined[:-1]
-    X_test = features_combined[-1:]
-    
-    return X_train, X_test
+# REMOVED: apply_feature_engineering_to_rolling_window() function
+# This function was deprecated and deleted to prevent data leakage.
+# It combined train and test data before feature engineering, causing:
+# 1. Rolling statistics to see test data
+# 2. Missing value imputation using test data statistics
+#
+# Instead, apply feature engineering separately to train and test data.
 
 
 # =============================================================================
