@@ -221,28 +221,29 @@ def run_rf_fe(Y, target_col_idx, lag):
     Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
     
     # Create embedded matrix with lags
-    aux = embed(Y_engineered, 4 + lag)
+    aux = embed(Y_engineered, 4)  # FIXED: Use fixed 4 lags, not 4 + lag
     
     # Target from original Y
-    y_target = embed(Y[:, target_col_idx].reshape(-1, 1), 4 + lag)[:, 0]
+    y_target = embed(Y[:, target_col_idx].reshape(-1, 1), 4)[:, 0]  # FIXED: Use fixed 4 lags
     
     # Align dimensions
     min_len = min(len(aux), len(y_target))
     aux = aux[:min_len]
     y_target = y_target[:min_len]
     
-    # Features (lagged values)
+    # Features (lagged values) - FIXED: embedding_depth is now 4
     n_cols = Y_engineered.shape[1]
-    X = aux[:, n_cols * lag:]
+    X = aux[:, n_cols * lag:]  # Use lag lags of features
     
-    # Out-of-sample features
+    # Out-of-sample features - FIXED: logic for fixed embedding depth
     if lag == 1:
         X_out = aux[-1, :X.shape[1]]
     else:
+        # For lag > 1, we need to trim the embedding to get the right features
         aux_trimmed = aux[:, :aux.shape[1] - n_cols * (lag - 1)]
         X_out = aux_trimmed[-1, :X.shape[1]]
     
-    # Adjust for lag
+    # Adjust for lag - FIXED: with embedding_depth=4, we need at least lag+1 observations
     y = y_target[:len(y_target) - lag + 1]
     X = X[:X.shape[0] - lag + 1, :]
     

@@ -227,11 +227,16 @@ def handle_missing_values(X, strategy='mean', fill_values=None):
     
     if strategy == 'mean':
         if fill_values is None:
-            # Compute from X (should be training data only)
-            computed_fill_values = np.nanmean(X, axis=0)
-            computed_fill_values = np.where(np.isnan(computed_fill_values), 0, computed_fill_values)
-        inds = np.where(np.isnan(X))
-        X[inds] = np.take(computed_fill_values, inds[1])
+            # Use forward fill instead of global mean to avoid future data leakage
+            # Forward fill uses only past values at each point
+            df = pd.DataFrame(X)
+            filled = df.fillna(method='ffill').fillna(method='bfill')  # bfill for very beginning
+            X = filled.values
+            computed_fill_values = None  # Forward fill doesn't have precomputable values
+        else:
+            # If fill_values provided, use them (should be from training data)
+            inds = np.where(np.isnan(X))
+            X[inds] = np.take(fill_values, inds[1])
     
     elif strategy == 'median':
         if fill_values is None:

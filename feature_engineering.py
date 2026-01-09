@@ -48,10 +48,11 @@ def calculate_zscore(series, window=12):
     """Calculate rolling z-score for a series.
     
     **DATA LEAKAGE PREVENTION:**
-    Uses only past + current data at each point (backwards-looking window).
+    Uses only PAST data at each point (excludes current observation).
+    At time t, uses data from [t-window, t-1] to avoid future information.
     """
-    rolling_mean = series.rolling(window=window, min_periods=1).mean()
-    rolling_std = series.rolling(window=window, min_periods=1).std()
+    rolling_mean = series.rolling(window=window, min_periods=1).mean().shift(1)
+    rolling_std = series.rolling(window=window, min_periods=1).std().shift(1)
     rolling_std = rolling_std.replace(0, np.nan)  # Avoid division by zero
     return (series - rolling_mean) / rolling_std
 
@@ -77,8 +78,8 @@ def calculate_rolling_statistics(series, windows=None):
     Calculate rolling statistics for different window sizes.
     
     **DATA LEAKAGE PREVENTION:**
-    All rolling windows look BACKWARDS only (include current + past data).
-    At time t, we use data from [t-window+1, t] to avoid future information.
+    All rolling windows use ONLY PAST data (exclude current observation).
+    At time t, we use data from [t-window, t-1] to avoid future information.
     
     Parameters:
     -----------
@@ -89,7 +90,7 @@ def calculate_rolling_statistics(series, windows=None):
     
     Returns:
     --------
-    pd.DataFrame : Rolling statistics (backwards-looking)
+    pd.DataFrame : Rolling statistics (past-data only)
     """
     if windows is None:
         windows = ROLLING_WINDOWS
@@ -100,15 +101,14 @@ def calculate_rolling_statistics(series, windows=None):
     stats = pd.DataFrame(index=series.index if hasattr(series, 'index') else range(len(series)))
     
     for w in windows:
-        # rolling() by default looks backwards (includes current observation)
-        # window=w means: use current + (w-1) past observations
-        # min_periods=1 ensures we get values even for early observations
-        stats[f'mean_{w}'] = series.rolling(window=w, min_periods=1).mean()
-        stats[f'std_{w}'] = series.rolling(window=w, min_periods=1).std()
-        stats[f'max_{w}'] = series.rolling(window=w, min_periods=1).max()
-        stats[f'min_{w}'] = series.rolling(window=w, min_periods=1).min()
+        # Use .shift(1) to exclude current observation
+        # At time t, uses data from [t-w, t-1] (past only)
+        stats[f'mean_{w}'] = series.rolling(window=w, min_periods=1).mean().shift(1)
+        stats[f'std_{w}'] = series.rolling(window=w, min_periods=1).std().shift(1)
+        stats[f'max_{w}'] = series.rolling(window=w, min_periods=1).max().shift(1)
+        stats[f'min_{w}'] = series.rolling(window=w, min_periods=1).min().shift(1)
         stats[f'range_{w}'] = stats[f'max_{w}'] - stats[f'min_{w}']
-        stats[f'skew_{w}'] = series.rolling(window=w, min_periods=2).skew()  # Need at least 2 for skew
+        stats[f'skew_{w}'] = series.rolling(window=w, min_periods=2).skew().shift(1)  # Need at least 2 for skew
     
     return stats
 
@@ -137,12 +137,12 @@ def calculate_momentum_features(series, horizons=None):
     momentum = pd.DataFrame(index=series.index if hasattr(series, 'index') else range(len(series)))
     
     for h in horizons:
-        # Rate of change
-        momentum[f'roc_{h}'] = series.pct_change(h)
+        # Rate of change (past data only)
+        momentum[f'roc_{h}'] = series.pct_change(h).shift(1)
         # Acceleration (second derivative)
-        momentum[f'acc_{h}'] = series.diff(h).diff(h)
+        momentum[f'acc_{h}'] = series.diff(h).diff(h).shift(1)
         # Momentum (current vs h periods ago)
-        momentum[f'mom_{h}'] = series - series.shift(h)
+        momentum[f'mom_{h}'] = (series - series.shift(h)).shift(1)
     
     return momentum
 
@@ -173,12 +173,12 @@ def calculate_volatility_features(series, windows=None):
     returns = series.pct_change()
     
     for w in windows:
-        # Standard deviation of returns (backwards-looking)
-        vol[f'vol_{w}'] = returns.rolling(window=w, min_periods=1).std()
+        # Standard deviation of returns (past data only)
+        vol[f'vol_{w}'] = returns.rolling(window=w, min_periods=1).std().shift(1)
         # Realized volatility (sum of squared returns)
-        vol[f'realized_vol_{w}'] = (returns ** 2).rolling(window=w, min_periods=1).sum().apply(np.sqrt)
+        vol[f'realized_vol_{w}'] = (returns ** 2).rolling(window=w, min_periods=1).sum().shift(1).apply(np.sqrt)
         # Volatility of volatility
-        vol[f'vol_of_vol_{w}'] = vol[f'vol_{w}'].rolling(window=w, min_periods=1).std()
+        vol[f'vol_of_vol_{w}'] = vol[f'vol_{w}'].rolling(window=w, min_periods=1).std().shift(1)
     
     return vol
 
@@ -460,11 +460,11 @@ class StationaryFeatureEngineer:
                 ratio = safe_divide(Y[:, i], np.abs(Y[:, j]) + 1e-8)
                 transforms.append(ratio)
         
-        # Rolling correlation between first two columns (CPI and PCE)
+        # Rolling correlation between first two columns (CPI and PCE) - past data only
         if n_cols >= 2:
             series1 = pd.Series(Y[:, 0])
             series2 = pd.Series(Y[:, 1])
-            rolling_corr = series1.rolling(12).corr(series2)
+            rolling_corr = series1.rolling(12).corr(series2).shift(1)
             transforms.append(rolling_corr.values)
         
         if transforms:
