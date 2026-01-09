@@ -39,7 +39,7 @@ def run_fact(Y, indice, lag, n_factors=4):
     # Combine target with factors
     Y2 = np.column_stack([y_target, pca_scores])
     
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     y = aux[:, 0]
     X = aux[:, (Y2.shape[1] * lag):]
     

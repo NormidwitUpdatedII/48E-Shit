@@ -50,7 +50,7 @@ def run_polilasso(Y, indice, lag, alpha=1.0, model_type="lasso"):
     Y2 = np.column_stack([Y, scores])
     
     # Create embedded matrix
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     y = aux[:, indice]
     n_cols_Y2 = Y2.shape[1]
     X = aux[:, n_cols_Y2 * lag:]

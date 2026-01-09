@@ -21,7 +21,7 @@ print(f"  Original data shape: {Y.shape}")
 print("\n[Step 2] Applying feature engineering...")
 fe = StationaryFeatureEngineer()
 Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
-Y_engineered = handle_missing_values(Y_engineered, strategy='mean')
+Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
 print(f"  Engineered features shape: {Y_engineered.shape}")
 print(f"  Feature expansion: {Y.shape[1]} → {Y_engineered.shape[1]} ({Y_engineered.shape[1]/Y.shape[1]:.1f}x)")
 

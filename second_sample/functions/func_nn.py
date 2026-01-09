@@ -44,7 +44,7 @@ def run_nn(Y, indice, lag, hidden_layers=[50, 50], epochs=100, dropout=0.2):
     pca_scores = pca_scores[:, :4]
     Y2 = np.column_stack([Y_main, pca_scores])
     
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     y = aux[:, indice - 1]
     X = aux[:, (Y2.shape[1] * lag):]
     

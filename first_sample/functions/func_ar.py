@@ -40,7 +40,7 @@ def run_ar(Y, indice, lag, model_type="fixed"):
     Y2 = Y[:, indice].reshape(-1, 1)
     
     # Create embedded matrix
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     y = aux[:, 0]
     X = aux[:, lag:]
     

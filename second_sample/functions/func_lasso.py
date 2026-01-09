@@ -121,7 +121,7 @@ def run_lasso(Y, indice, lag, alpha=1, type_='lasso'):
     Y2 = np.column_stack([Y_main[:, indice - 1], pca_scores])
     
     # Create embedded matrix
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     
     # Extract y and X
     y = aux[:, 0]
@@ -260,7 +260,7 @@ def run_pols(Y, indice, lag, coef):
     pca_scores = pca_scores[:, :4]  # Take only first 4 components
     Y2 = np.column_stack([Y_main, pca_scores])
     
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     y = aux[:, indice - 1]
     X = aux[:, (Y2.shape[1] * lag):]
     

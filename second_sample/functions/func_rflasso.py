@@ -100,7 +100,7 @@ def run_rflasso(Y, indice, lag):
     Y2 = np.column_stack([Y_main, pca_scores])
     
     # Create embedded matrix
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     
     # Extract y and X
     y = aux[:, indice - 1]

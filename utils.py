@@ -44,6 +44,14 @@ def compute_pca_scores(Y, n_components=4, scale=False):
     """
     Compute PCA scores similar to R's princomp.
     
+    **DATA LEAKAGE WARNING:**
+    This function computes PCA on the ENTIRE dataset Y.
+    For forecasting applications, this may include future information
+    that should not be available at prediction time.
+    
+    Consider computing PCA only on training data and applying
+    the transformation to test data separately.
+    
     Parameters:
     -----------
     Y : array-like
@@ -145,7 +153,7 @@ def prepare_forecast_data(Y, indice, lag, n_pca_components=4):
     Y2 = np.column_stack([Y, scores])
     
     # Create embedded matrix
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     
     # Extract target variable
     y = aux[:, indice]

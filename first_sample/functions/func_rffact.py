@@ -74,7 +74,7 @@ def run_rffact(Y, indice, lag, importance_weights, n_factors=4):
     Y2 = np.column_stack([Y[:, indice], factors])
 
     # Create embedded matrix for forecasting
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     y = aux[:, 0]  # Target is first column
     n_cols_Y2 = Y2.shape[1]
     X = aux[:, n_cols_Y2 * lag:]

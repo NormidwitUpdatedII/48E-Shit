@@ -35,7 +35,7 @@ def run_xgb(Y, indice, lag):
     pca_scores = pca_scores[:, :4]
     Y2 = np.column_stack([Y_main, pca_scores])
     
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     y = aux[:, indice - 1]
     X = aux[:, (Y2.shape[1] * lag):]
     

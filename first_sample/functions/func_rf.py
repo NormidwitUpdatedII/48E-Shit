@@ -44,7 +44,7 @@ def run_rf(Y, indice, lag):
     Y2 = np.column_stack([Y_filled, scores])
     
     # Create embedded matrix
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     y = aux[:, indice]
     n_cols_Y2 = Y2.shape[1]
     X = aux[:, n_cols_Y2 * lag:]

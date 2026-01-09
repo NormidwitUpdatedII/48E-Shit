@@ -140,7 +140,7 @@ def run_flasso(Y, indice, lag, alpha=1, type_='lasso'):
     Y2 = np.column_stack([Y_main[:, indice - 1], pca_scores])
     
     # Create embedded matrix
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     
     # Extract y and X
     y = aux[:, 0]  # First column is target
@@ -309,7 +309,7 @@ def run_pols_dummy(Y, indice, lag, coef):
     Y2 = np.column_stack([Y_main, pca_scores[:, :4]])
     
     # Create embedded matrix
-    aux = embed(Y2, 4 + lag)
+    aux = embed(Y2, 4)
     
     # Extract y and X
     y = aux[:, indice - 1]
