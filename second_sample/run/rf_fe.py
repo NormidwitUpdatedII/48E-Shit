@@ -68,47 +68,46 @@ def run_rf_fe(Y, indice, lag):
     Y_engineered = fe.get_all_features(Y, include_raw=False, skip_basic_transforms=True)
     Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
     
-    # Step 3: Align lengths
-    min_len = min(len(aux_raw), len(Y_engineered))
-    aux_raw = aux_raw[:min_len]
-    Y_eng_current = Y_engineered[:min_len]
+    # Step 3: Align lengths (starts at index 3 due to embed 4)
+    Y_eng_aligned = Y_engineered[3:3+len(aux_raw)]
+    X_combined = np.hstack([aux_raw, Y_eng_aligned])
     
-    # Step 4: Create target
-    y_target = embed(Y[:, indice].reshape(-1, 1), 4)[:, 0]
-    y_target = y_target[:min_len]
+    # Step 4: Create target from original Y (aligned with X_combined)
+    y_target = Y[3:3+len(aux_raw), indice]
     
-    # Step 5: Build feature matrix
-    if lag == 1:
-        X_raw_lagged = aux_raw
-    else:
-        lag_start = n_raw_features * (lag - 1)
-        lag_end = lag_start + (n_raw_features * 4)
-        if lag_end <= aux_raw.shape[1]:
-            X_raw_lagged = aux_raw[:, lag_start:lag_end]
-        else:
-            X_raw_lagged = aux_raw[:, lag_start:]
+    # Step 5: Supervised Learning Alignment (CRITICAL FIX)
+    # Match Month t info (X_t) with Month t+lag target (y_{t+lag})
+    if len(X_combined) <= lag:
+        return {'model': None, 'pred': np.nan}
+        
+    y_train = y_target[lag:]
+    X_train = X_combined[:-lag, :]
     
-    # Step 6: Combine lagged raw + current engineered
-    X = np.hstack([X_raw_lagged, Y_eng_current])
-    X_out = X[-1, :]
+    # Step 6: Prepare features for the out-of-sample forecast
+    # We use the most recent info set (Month T) to predict Month T+lag
+    X_out = X_combined[-1, :].reshape(1, -1)
     
-    # Step 7: Adjust for forecast horizon
-    y = y_target[:len(y_target) - lag + 1]
-    X = X[:X.shape[0] - lag + 1, :]
+    # Step 7: Apply 3-stage feature selection
+    X_train, selection_info = apply_3stage_feature_selection(
+        X_train, 
+        constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
+        correlation_threshold=CORRELATION_THRESHOLD,
+        variance_threshold=LOW_VARIANCE_THRESHOLD,
+        verbose=False
+    )
     
-    # Feature selection
-    X, var_mask = select_features_by_variance(X, threshold=0.001)
-    X_out = X_out[var_mask]
+    # Apply same selection to out-of-sample features
+    X_out = X_out[:, selection_info['combined_mask']]
     
-    if X.shape[1] > 50:
-        X, corr_mask = remove_highly_correlated(X, threshold=0.95)
-        X_out = X_out[corr_mask]
+    # Step 8: Standardize
+    X_train, scaler = standardize_features(X_train)
+    X_out = scaler.transform(X_out)
     
-    X, scaler = standardize_features(X)
-    X_out = scaler.transform(X_out.reshape(1, -1))
-    
+    # Step 9: Train Random Forest
     model = RandomForestRegressor(**RF_PARAMS)
-    model.fit(X, y)
+    model.fit(X_train, y_train)
+    
+    # Step 10: Predict
     pred = model.predict(X_out)[0]
     
     return {'model': model, 'pred': pred}

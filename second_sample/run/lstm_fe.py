@@ -62,64 +62,66 @@ def run_lstm_fe(Y, indice, lag, lstm_units=64, dropout_rate=0.2):
     Y = np.array(Y)
     n_raw_features = Y.shape[1]
     
-    # OPTIMIZATION: Separate raw lagging from feature engineering
+    # Step 1: Lag raw features
     aux_raw = embed(Y, 4)
     
+    # Step 2: Engineer features
     fe = StationaryFeatureEngineer()
     Y_engineered = fe.get_all_features(Y, include_raw=False, skip_basic_transforms=True)
     Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
+    # Step 3: Align lengths (starts at index 3 due to embed 4)
+    Y_eng_aligned = Y_engineered[3:3+len(aux_raw)]
+    X_combined = np.hstack([aux_raw, Y_eng_aligned])
     
-    min_len = min(len(aux_raw), len(Y_engineered))
-    aux_raw = aux_raw[:min_len]
-    Y_eng_current = Y_engineered[:min_len]
+    # Step 4: Create target from original Y (aligned with X_combined)
+    y_target = Y[3:3+len(aux_raw), indice]
     
-    y_target = embed(Y[:, indice].reshape(-1, 1), 4)[:, 0]
-    y_target = y_target[:min_len]
+    # Step 5: Supervised Learning Alignment (CRITICAL FIX)
+    # Match Month t info (X_t) with Month t+lag target (y_{t+lag})
+    if len(X_combined) <= lag:
+        return {'model': None, 'pred': np.nan}
+        
+    y_train = y_target[lag:]
+    X_train = X_combined[:-lag, :]
     
-    if lag == 1:
-        X_raw_lagged = aux_raw
-    else:
-        lag_start = n_raw_features * (lag - 1)
-        lag_end = lag_start + (n_raw_features * 4)
-        if lag_end <= aux_raw.shape[1]:
-            X_raw_lagged = aux_raw[:, lag_start:lag_end]
-        else:
-            X_raw_lagged = aux_raw[:, lag_start:]
+    # Step 6: Prepare features for the out-of-sample forecast
+    # We use the most recent info set (Month T) to predict Month T+lag
+    X_out = X_combined[-1, :].reshape(1, -1)
     
-    X = np.hstack([X_raw_lagged, Y_eng_current])
-    X_out = X[-1, :]
-    
-    y = y_target[:len(y_target) - lag + 1]
-    X = X[:X.shape[0] - lag + 1, :]
-    
-    # Feature selection for LSTM efficiency
-    X, selection_info = apply_3stage_feature_selection(
-        X,
+    # Step 7: Feature selection for LSTM efficiency
+    # Apply 3-stage selection first
+    X_train, selection_info = apply_3stage_feature_selection(
+        X_train,
         constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
         correlation_threshold=CORRELATION_THRESHOLD,
         variance_threshold=LOW_VARIANCE_THRESHOLD * 2,
         verbose=False
     )
-    X_out = X_out[selection_info['combined_mask']]
+    X_out = X_out[:, selection_info['combined_mask']]
     
-    # Limit features for LSTM efficiency (keep top ~200 features)
-    if X.shape[1] > 200:
-        variances = np.var(X, axis=0)
+    # Limit features for LSTM efficiency (keep top ~200 features based on TRAINING variance)
+    if X_train.shape[1] > 200:
+        variances = np.var(X_train, axis=0)
         top_indices = np.argsort(variances)[-200:]
-        X = X[:, top_indices]
-        X_out = X_out[top_indices]
+        X_train = X_train[:, top_indices]
+        X_out = X_out[:, top_indices]
     
-    X_mean, X_std = X.mean(axis=0), X.std(axis=0)
+    # Reshape X_out to be 1D for standardization logic if needed
+    X_out = X_out.flatten()
+    
+    # Standardize
+    X_mean, X_std = X_train.mean(axis=0), X_train.std(axis=0)
     X_std[X_std == 0] = 1
-    X_scaled = (X - X_mean) / X_std
+    X_scaled = (X_train - X_mean) / X_std
     X_out_scaled = (X_out - X_mean) / X_std
     
-    lookback = min(4, X.shape[1])
-    n_features = X.shape[1] // lookback
+    # Reshape for LSTM (samples, timesteps, features)
+    lookback = min(4, X_train.shape[1])
+    n_features = X_train.shape[1] // lookback
     
-    if X.shape[1] % lookback != 0:
-        n_features = X.shape[1] // lookback + 1
-        pad_width = n_features * lookback - X.shape[1]
+    if X_train.shape[1] % lookback != 0:
+        n_features = X_train.shape[1] // lookback + 1
+        pad_width = n_features * lookback - X_train.shape[1]
         X_scaled = np.pad(X_scaled, ((0, 0), (0, pad_width)), mode='constant')
         X_out_scaled = np.pad(X_out_scaled, (0, pad_width), mode='constant')
     

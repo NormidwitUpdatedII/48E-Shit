@@ -139,106 +139,98 @@ def run_rf_fe_hybrid(Y_raw_matrix, target_name, lag, raw_column_names):
     if len(Y_raw_matrix) < 20:
         return {'pred': np.nan, 'n_features': 0}
     
-    # OPTIMIZATION 1: Separate raw lagging from feature engineering
-    # Only lag the 126 raw features (not the 4,410 engineered ones!)
-    aux_raw = embed(Y_raw_matrix, 4)  # 126 × 4 = 504 lagged features
-    
+    # OPTIMIZATION 1: Use most recent raw features (lags 0, 1, 2, 3)
+    # aux_raw[t] contains [Y_t, Y_{t-1}, Y_{t-2}, Y_{t-3}] for all 126 variables
+    aux_raw = embed(Y_raw_matrix, 4)
     if len(aux_raw) < 2:
         return {'pred': np.nan, 'n_features': 0}
     
-    # OPTIMIZATION 2: Engineer features on CURRENT data (no lags)
+    # OPTIMIZATION 2: Engineer features on CURRENT data
     fe = StationaryFeatureEngineer()
     df_raw = pd.DataFrame(Y_raw_matrix, columns=raw_column_names)
     eng_out = fe.get_all_features(df_raw, include_raw=False, skip_basic_transforms=True)
-    
     Y_eng = eng_out.values if isinstance(eng_out, pd.DataFrame) else eng_out
-    eng_cols = eng_out.columns.tolist() if isinstance(eng_out, pd.DataFrame) else []
+    
+    # Trim engineered features to match aux_raw length (starts at index 3 due to embed 4)
+    Y_eng_aligned = Y_eng[3:]
     
     # FRIEND's OPTIMIZATION: Use float32 for memory efficiency
-    Y_eng, _ = handle_missing_values(Y_eng, strategy='mean')
-    Y_eng = Y_eng.astype(np.float32)
+    Y_eng_aligned, _ = handle_missing_values(Y_eng_aligned, strategy='mean')
+    Y_eng_aligned = Y_eng_aligned.astype(np.float32)
     
-    # Align lengths
-    min_len = min(len(aux_raw), len(Y_eng))
-    aux_raw = aux_raw[:min_len]
-    Y_eng_current = Y_eng[:min_len]
+    # Combine into feature matrix where each row 't' is info available at time 't'
+    min_len = min(len(aux_raw), len(Y_eng_aligned))
+    X_combined = np.hstack([aux_raw[:min_len], Y_eng_aligned[:min_len]]).astype(np.float32)
     
-    # Build feature matrix based on forecast horizon
-    if lag == 1:
-        X_raw_lagged = aux_raw
-    else:
-        lag_start = n_raw_features * (lag - 1)
-        lag_end = lag_start + (n_raw_features * 4)
-        
-        if lag_end <= aux_raw.shape[1]:
-            X_raw_lagged = aux_raw[:, lag_start:lag_end]
-        else:
-            X_raw_lagged = aux_raw[:, lag_start:]
-    
-    # OPTIMIZATION 3: Combine lagged raw + current engineered
-    # Total: ~504 lagged + ~4,410 current = ~4,914 features (vs 20,000!)
-    X_combined = np.hstack([X_raw_lagged, Y_eng_current]).astype(np.float32)
-    
-    # Create target
-    # Find target in original raw columns or engineered columns
+    # Target values (Month 3 to T)
     if target_name in raw_column_names:
         t_idx = raw_column_names.index(target_name)
-        y_target = embed(Y_raw_matrix[:, t_idx].reshape(-1, 1), 4)[:, 0]
+        y_target = Y_raw_matrix[3:3+min_len, t_idx]
     else:
-        # Target might be in engineered features
         return {'pred': np.nan, 'n_features': 0}
     
-    y_target = y_target[:min_len]
+    # --- SUPERVISED LEARNING ALIGNMENT (CRITICAL) ---
+    # We want to match: X_t (info at time t) -> y_{t+h} (target at time t+h)
+    # Features X_t: [Y_t, Y_{t-1}, ..., engineered_t]
+    # Prediction target is h months ahead
     
-    # Adjust for forecast horizon
-    y = y_target[:len(y_target) - lag + 1]
-    X = X_combined[:X_combined.shape[0] - lag + 1, :]
-    
-    if len(X) < 2 or len(y) < 2:
+    if len(X_combined) <= lag:
         return {'pred': np.nan, 'n_features': 0}
     
-    # FRIEND's FEATURE: SelectKBest pre-screening
-    # This is smart - use statistical test to reduce features before correlation analysis
-    num_k = min(MAX_FEATURES, X.shape[1])
-    if X.shape[1] > num_k:
+    # X used for training (all but last 'lag' months)
+    X_train_full = X_combined[:-lag, :]
+    # y used for training (shifted forward by 'lag')
+    y_train_full = y_target[lag:]
+    
+    # X used for prediction (the VERY LAST information set available)
+    X_forecast = X_combined[-1:, :]
+    
+    # SelectKBest pre-screening on TRAINING DATA ONLY (Leakage Prevention)
+    num_k = min(MAX_FEATURES, X_train_full.shape[1])
+    if X_train_full.shape[1] > num_k:
         selector = SelectKBest(score_func=f_regression, k=num_k)
-        selector.fit(X[:-1], y[:-1])  # FIX: Both X and y trimmed to match lengths
-        X_screened = X[:, selector.get_support()]
+        selector.fit(X_train_full, y_train_full)
+        X_train_screened = X_train_full[:, selector.get_support()]
+        X_forecast_screened = X_forecast[:, selector.get_support()]
     else:
-        X_screened = X
+        X_train_screened = X_train_full
+        X_forecast_screened = X_forecast
     
-    # Apply 3-stage feature selection (now much faster with pre-screened features!)
+    # Apply 3-stage feature selection to training data
     try:
-        X_final, selection_info = apply_3stage_feature_selection(
-            X_screened,
+        X_final_train, selection_info = apply_3stage_feature_selection(
+            X_train_screened,
             constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
             correlation_threshold=CORRELATION_THRESHOLD,
             variance_threshold=LOW_VARIANCE_THRESHOLD,
             verbose=False
         )
+        # Apply same selection to forecast features
+        X_final_forecast = X_forecast_screened[:, selection_info['selected_indices']]
     except Exception as e:
         print(f"  ⚠ Feature selection failed: {e}")
-        X_final = X_screened
+        X_final_train = X_train_screened
+        X_final_forecast = X_forecast_screened
     
-    if X_final.shape[1] == 0:
+    if X_final_train.shape[1] == 0:
         return {'pred': np.nan, 'n_features': 0}
     
     # Standardize
     scaler = StandardScaler()
-    X_train = scaler.fit_transform(X_final[:-1])
-    y_train = y[:-1]
+    X_train_scaled = scaler.fit_transform(X_final_train)
+    y_train = y_train_full
     
     # Train Random Forest
     model = RandomForestRegressor(**RF_PARAMS)
-    model.fit(X_train, y_train)
+    model.fit(X_train_scaled, y_train)
     
     # Predict
-    X_today = scaler.transform(X_final[-1:].reshape(1, -1))
-    pred = model.predict(X_today)[0]
+    X_today_scaled = scaler.transform(X_final_forecast)
+    pred = model.predict(X_today_scaled)[0]
     
     return {
         'pred': float(pred),
-        'n_features': X_final.shape[1]
+        'n_features': X_final_train.shape[1]
     }
 
 
