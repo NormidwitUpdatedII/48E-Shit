@@ -288,9 +288,20 @@ def rolling_forecast_hybrid(data, raw_cols, train_mask, test_mask, h, t_name, p_
     t_raw_idx = raw_cols.index(t_name)
     
     def worker(i):
-        """Process single forecast iteration."""
-        # Expanding window: use all data up to current point
-        Y_window = np.vstack([data_train, data_test[:i + 1]])
+        """Process single forecast iteration.
+        
+        DATA LEAKAGE FIX:
+        - At time i, we forecast i + h
+        - Training data must EXCLUDE observation i (the forecast origin)
+        - Only use data BEFORE time i
+        """
+        # Expanding window: use all data BEFORE current point (exclude i)
+        if i == 0:
+            # First forecast: use only training data
+            Y_window = data_train
+        else:
+            # Subsequent forecasts: training + test data up to (but NOT including) i
+            Y_window = np.vstack([data_train, data_test[:i]])
         
         # Run hybrid RF-FE
         res = run_rf_fe_hybrid(Y_window, t_name, h, raw_cols)
