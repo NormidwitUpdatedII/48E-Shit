@@ -35,7 +35,7 @@ def calculate_bic(y, y_pred, k):
     return n * np.log(rss / n) + k * np.log(n)
 
 
-def run_ar(Y, indice, lag, type_='fixed', max_lag=12):
+def run_ar(Y, indice, lag, model_type='fixed', max_lag=12):
     """
     Run AR model for inflation forecasting with dummy variable.
     
@@ -47,10 +47,10 @@ def run_ar(Y, indice, lag, type_='fixed', max_lag=12):
         Index of target variable (1 for CPI, 2 for PCE)
     lag : int
         Forecast horizon
-    type_ : str
+    model_type : str
         Type of lag selection ('fixed', 'bic', 'aic')
     max_lag : int
-        Maximum lag for model selection (only used when type_ != 'fixed')
+        Maximum lag for model selection (only used when model_type != 'fixed')
     
     Returns
     -------
@@ -69,7 +69,7 @@ def run_ar(Y, indice, lag, type_='fixed', max_lag=12):
     # Get target series
     y_full = Y_main[:, indice - 1]
     
-    if type_ == 'fixed':
+    if model_type == 'fixed':
         # Use fixed number of lags
         n_lags = lag
         
@@ -115,7 +115,7 @@ def run_ar(Y, indice, lag, type_='fixed', max_lag=12):
                 
                 y_pred = model.predict(X)
                 
-                if type_ == 'bic':
+                if model_type == 'bic':
                     ic = calculate_bic(y, y_pred, n_lags + 1)
                 else:  # aic
                     ic = calculate_aic(y, y_pred, n_lags + 1)
@@ -138,7 +138,7 @@ def run_ar(Y, indice, lag, type_='fixed', max_lag=12):
     }
 
 
-def ar_rolling_window(Y, nprev, indice=1, lag=1, type_='fixed'):
+def ar_rolling_window(Y, nprev, indice=1, lag=1, model_type='fixed'):
     """
     Rolling window forecasting with AR model.
     
@@ -152,7 +152,7 @@ def ar_rolling_window(Y, nprev, indice=1, lag=1, type_='fixed'):
         Index of target variable
     lag : int
         Forecast horizon
-    type_ : str
+    model_type : str
         Type of lag selection ('fixed', 'bic', 'aic')
     
     Returns
@@ -168,7 +168,7 @@ def ar_rolling_window(Y, nprev, indice=1, lag=1, type_='fixed'):
         start_idx = nprev - i
         end_idx = n_obs - i
         Y_window = Y[start_idx:end_idx, :]
-        result = run_ar(Y_window, indice, lag, type_)
+        result = run_ar(Y_window, indice, lag, model_type)
         idx = nprev - i
         return idx, result['pred']
     

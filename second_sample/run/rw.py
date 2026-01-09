@@ -19,7 +19,7 @@ from utils import load_csv, save_forecasts
 from functions.func_rw import rw_rolling_window
 
 # Parameters
-nprev = 300  # Out-of-sample forecasts for second sample
+nprev = 298  # Out-of-sample forecasts for second sample (consistent with other models)
 
 # Load data
 data = load_csv(DATA_PATH)

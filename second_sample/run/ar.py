@@ -34,15 +34,15 @@ def main():
     print("Running fixed AR models...")
     for lag in range(1, 13):
         print(f"  AR lag={lag}")
-        results[f'ar{lag}c'] = ar_rolling_window(Y, nprev, indice=1, lag=lag, type_='fixed')
-        results[f'ar{lag}p'] = ar_rolling_window(Y, nprev, indice=2, lag=lag, type_='fixed')
+        results[f'ar{lag}c'] = ar_rolling_window(Y, nprev, indice=1, lag=lag, model_type='fixed')
+        results[f'ar{lag}p'] = ar_rolling_window(Y, nprev, indice=2, lag=lag, model_type='fixed')
     
     # BIC AR models
     print("Running BIC AR models...")
     for lag in range(1, 13):
         print(f"  BIC AR lag={lag}")
-        results[f'bar{lag}c'] = ar_rolling_window(Y, nprev, indice=1, lag=lag, type_='bic')
-        results[f'bar{lag}p'] = ar_rolling_window(Y, nprev, indice=2, lag=lag, type_='bic')
+        results[f'bar{lag}c'] = ar_rolling_window(Y, nprev, indice=1, lag=lag, model_type='bic')
+        results[f'bar{lag}p'] = ar_rolling_window(Y, nprev, indice=2, lag=lag, model_type='bic')
     
     # Combine results
     cpi_fixed = np.column_stack([results[f'ar{lag}c']['pred'] for lag in range(1, 13)])
