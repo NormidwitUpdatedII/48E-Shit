@@ -14,19 +14,35 @@ def standardize_features(X, scaler=None, fit=True):
     """
     Standardize features using StandardScaler.
     
+    **DATA LEAKAGE PREVENTION:**
+    - When fit=True: Only use this on TRAINING data to learn statistics
+    - When fit=False: Use this on TEST data with pre-fitted scaler from training
+    - Never fit on combined train+test data!
+    
     Parameters:
     -----------
     X : np.ndarray
         Feature matrix
     scaler : StandardScaler, optional
-        Pre-fitted scaler (for test data)
+        Pre-fitted scaler (for test data). If provided with fit=True, will raise error.
     fit : bool
-        Whether to fit the scaler
+        Whether to fit the scaler on X (True) or just transform (False)
     
     Returns:
     --------
     tuple : (X_scaled, scaler)
+    
+    Raises:
+    -------
+    ValueError : If scaler is provided with fit=True (ambiguous intent)
     """
+    if scaler is not None and fit:
+        raise ValueError(
+            "Cannot fit=True when scaler is provided. This may cause data leakage.\n"
+            "Use fit=True with scaler=None (fit on training data) OR\n"
+            "Use fit=False with provided scaler (transform test data with train statistics)."
+        )
+    
     if scaler is None:
         scaler = StandardScaler()
     
@@ -180,9 +196,14 @@ def remove_highly_correlated(X, threshold=0.95):
     return X[:, mask], mask
 
 
-def handle_missing_values(X, strategy='mean'):
+def handle_missing_values(X, strategy='mean', fill_values=None):
     """
     Handle missing values in feature matrix.
+    
+    **DATA LEAKAGE PREVENTION:**
+    - When fill_values=None: Compute statistics from X (USE ONLY FOR TRAINING DATA)
+    - When fill_values provided: Use precomputed statistics (FOR TEST DATA)
+    - Never compute statistics on combined train+test data!
     
     Parameters:
     -----------
@@ -190,27 +211,38 @@ def handle_missing_values(X, strategy='mean'):
         Feature matrix
     strategy : str
         'mean', 'median', 'zero', or 'forward_fill'
+    fill_values : np.ndarray, optional
+        Precomputed fill values (e.g., mean/median from training data).
+        If provided, these will be used instead of computing from X.
+        This prevents test data leakage.
     
     Returns:
     --------
-    np.ndarray : Cleaned feature matrix
+    tuple : (X_cleaned, fill_values)
+        - X_cleaned: Cleaned feature matrix
+        - fill_values: The fill values used (for applying to test data)
     """
     X = X.copy()
+    computed_fill_values = fill_values
     
     if strategy == 'mean':
-        col_means = np.nanmean(X, axis=0)
-        col_means = np.where(np.isnan(col_means), 0, col_means)
+        if fill_values is None:
+            # Compute from X (should be training data only)
+            computed_fill_values = np.nanmean(X, axis=0)
+            computed_fill_values = np.where(np.isnan(computed_fill_values), 0, computed_fill_values)
         inds = np.where(np.isnan(X))
-        X[inds] = np.take(col_means, inds[1])
+        X[inds] = np.take(computed_fill_values, inds[1])
     
     elif strategy == 'median':
-        col_medians = np.nanmedian(X, axis=0)
-        col_medians = np.where(np.isnan(col_medians), 0, col_medians)
+        if fill_values is None:
+            computed_fill_values = np.nanmedian(X, axis=0)
+            computed_fill_values = np.where(np.isnan(computed_fill_values), 0, computed_fill_values)
         inds = np.where(np.isnan(X))
-        X[inds] = np.take(col_medians, inds[1])
+        X[inds] = np.take(computed_fill_values, inds[1])
     
     elif strategy == 'zero':
         X = np.nan_to_num(X, nan=0.0)
+        computed_fill_values = np.zeros(X.shape[1])  # For consistency
     
     elif strategy == 'forward_fill':
         for col in range(X.shape[1]):
@@ -220,11 +252,12 @@ def handle_missing_values(X, strategy='mean'):
                 idx = np.where(~mask, np.arange(len(mask)), 0)
                 idx = np.maximum.accumulate(idx)
                 X[:, col] = X[idx, col]
+        computed_fill_values = None  # Forward fill doesn't have precomputable values
     
     # Handle any remaining NaN (e.g., at start for forward_fill)
     X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)
     
-    return X
+    return X, computed_fill_values
 
 
 def create_feature_pipeline(X, y=None, standardize=True, reduce_dim=False, 

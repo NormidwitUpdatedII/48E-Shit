@@ -45,9 +45,13 @@ from feature_config import (
 # =============================================================================
 
 def calculate_zscore(series, window=12):
-    """Calculate rolling z-score for a series."""
-    rolling_mean = series.rolling(window).mean()
-    rolling_std = series.rolling(window).std()
+    """Calculate rolling z-score for a series.
+    
+    **DATA LEAKAGE PREVENTION:**
+    Uses only past + current data at each point (backwards-looking window).
+    """
+    rolling_mean = series.rolling(window=window, min_periods=1).mean()
+    rolling_std = series.rolling(window=window, min_periods=1).std()
     rolling_std = rolling_std.replace(0, np.nan)  # Avoid division by zero
     return (series - rolling_mean) / rolling_std
 
@@ -72,6 +76,10 @@ def calculate_rolling_statistics(series, windows=None):
     """
     Calculate rolling statistics for different window sizes.
     
+    **DATA LEAKAGE PREVENTION:**
+    All rolling windows look BACKWARDS only (include current + past data).
+    At time t, we use data from [t-window+1, t] to avoid future information.
+    
     Parameters:
     -----------
     series : pd.Series or np.array
@@ -81,7 +89,7 @@ def calculate_rolling_statistics(series, windows=None):
     
     Returns:
     --------
-    pd.DataFrame : Rolling statistics
+    pd.DataFrame : Rolling statistics (backwards-looking)
     """
     if windows is None:
         windows = ROLLING_WINDOWS
@@ -92,12 +100,15 @@ def calculate_rolling_statistics(series, windows=None):
     stats = pd.DataFrame(index=series.index if hasattr(series, 'index') else range(len(series)))
     
     for w in windows:
-        stats[f'mean_{w}'] = series.rolling(w).mean()
-        stats[f'std_{w}'] = series.rolling(w).std()
-        stats[f'max_{w}'] = series.rolling(w).max()
-        stats[f'min_{w}'] = series.rolling(w).min()
+        # rolling() by default looks backwards (includes current observation)
+        # window=w means: use current + (w-1) past observations
+        # min_periods=1 ensures we get values even for early observations
+        stats[f'mean_{w}'] = series.rolling(window=w, min_periods=1).mean()
+        stats[f'std_{w}'] = series.rolling(window=w, min_periods=1).std()
+        stats[f'max_{w}'] = series.rolling(window=w, min_periods=1).max()
+        stats[f'min_{w}'] = series.rolling(window=w, min_periods=1).min()
         stats[f'range_{w}'] = stats[f'max_{w}'] - stats[f'min_{w}']
-        stats[f'skew_{w}'] = series.rolling(w).skew()
+        stats[f'skew_{w}'] = series.rolling(window=w, min_periods=2).skew()  # Need at least 2 for skew
     
     return stats
 
@@ -162,12 +173,12 @@ def calculate_volatility_features(series, windows=None):
     returns = series.pct_change()
     
     for w in windows:
-        # Standard deviation of returns
-        vol[f'vol_{w}'] = returns.rolling(w).std()
+        # Standard deviation of returns (backwards-looking)
+        vol[f'vol_{w}'] = returns.rolling(window=w, min_periods=1).std()
         # Realized volatility (sum of squared returns)
-        vol[f'realized_vol_{w}'] = (returns ** 2).rolling(w).sum().apply(np.sqrt)
+        vol[f'realized_vol_{w}'] = (returns ** 2).rolling(window=w, min_periods=1).sum().apply(np.sqrt)
         # Volatility of volatility
-        vol[f'vol_of_vol_{w}'] = vol[f'vol_{w}'].rolling(w).std()
+        vol[f'vol_of_vol_{w}'] = vol[f'vol_{w}'].rolling(window=w, min_periods=1).std()
     
     return vol
 
@@ -579,7 +590,19 @@ def engineer_features_for_model(Y, include_raw=True, handle_nan='fill', skip_bas
 
 def apply_feature_engineering_to_rolling_window(Y_train, Y_test_row, include_raw=True, skip_basic_transforms=True):
     """
-    Apply feature engineering in a rolling window context.
+    **DEPRECATED - CAUSES DATA LEAKAGE**
+    
+    This function has been deprecated because it combines train and test data
+    before applying feature engineering, which causes data leakage through:
+    1. Rolling statistics that see test data
+    2. Missing value imputation using test data statistics
+    
+    Instead, use:
+    1. Create features on train data only
+    2. Store feature parameters (e.g., imputation values)
+    3. Apply same parameters to test data separately
+    
+    This function is kept for backwards compatibility but will raise a warning.
     
     Parameters:
     -----------
@@ -596,16 +619,24 @@ def apply_feature_engineering_to_rolling_window(Y_train, Y_test_row, include_raw
     --------
     tuple : (X_train_engineered, X_test_engineered)
     """
+    import warnings
+    warnings.warn(
+        "apply_feature_engineering_to_rolling_window is DEPRECATED and causes DATA LEAKAGE. "
+        "Use separate feature engineering for train and test data.",
+        DeprecationWarning,
+        stacklevel=2
+    )
+    
     fe = StationaryFeatureEngineer()
     
-    # Combine for consistent transformation
+    # Combine for consistent transformation (THIS IS THE LEAKAGE!)
     Y_combined = np.vstack([Y_train, Y_test_row.reshape(1, -1)])
     
     # Engineer features (skip basic transforms by default)
     features_combined = fe.get_all_features(Y_combined, include_raw=include_raw, 
                                             skip_basic_transforms=skip_basic_transforms)
     
-    # Handle NaN
+    # Handle NaN - using train mean only (partial fix, but still has leakage in rolling stats)
     col_means = np.nanmean(features_combined[:-1], axis=0)  # Mean from train only
     col_means = np.where(np.isnan(col_means), 0, col_means)
     inds = np.where(np.isnan(features_combined))

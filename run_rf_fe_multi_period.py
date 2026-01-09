@@ -216,8 +216,9 @@ def run_rf_fe(Y, target_col_idx, lag):
     fe = StationaryFeatureEngineer()
     Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
     
-    # Handle NaN values
-    Y_engineered = handle_missing_values(Y_engineered, strategy='mean')
+    # Handle NaN values - compute fill values from Y_engineered
+    # These are the training statistics that will be used
+    Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
     
     # Create embedded matrix with lags
     aux = embed(Y_engineered, 4 + lag)
