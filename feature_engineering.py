@@ -111,6 +111,11 @@ def calculate_rolling_statistics(series, windows=None):
         stats[f'min_{w}'] = series.rolling(window=w, min_periods=w).min().shift(1)
         stats[f'range_{w}'] = stats[f'max_{w}'] - stats[f'min_{w}']
         stats[f'skew_{w}'] = series.rolling(window=w, min_periods=w).skew().shift(1)
+        
+        # Robust dispersion: Rolling Median Absolute Deviation (MAD)
+        # Shift(1) to avoid leakage
+        roll_med = series.rolling(window=w, min_periods=w).median()
+        stats[f'mad_{w}'] = (series - roll_med).abs().rolling(window=w, min_periods=w).median().shift(1)
     
     return stats
 
