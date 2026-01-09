@@ -195,7 +195,11 @@ def split_data_by_period(data_matrix, dates, train_end, test1_start, test1_end, 
 
 def run_rf_fe(Y, target_col_idx, lag):
     """
-    Run Random Forest with Feature Engineering for a single forecast.
+    Run Random Forest with Feature Engineering for a single forecast (OPTIMIZED).
+    
+    OPTIMIZATION: Only lag raw features, not engineered features.
+    Reduces features from ~20,000 to ~5,000 (75% reduction).
+    Expected runtime reduction: 80 hours → 4-8 hours (10-20x faster).
     
     Parameters:
     -----------
@@ -208,46 +212,54 @@ def run_rf_fe(Y, target_col_idx, lag):
         
     Returns:
     --------
-    dict : Dictionary with 'model', 'pred', and 'feature_info'
+    dict : Dictionary with 'model', 'pred', and 'n_features'
     """
     Y = np.array(Y)
+    n_raw_features = Y.shape[1]
     
-    # Apply feature engineering
+    # OPTIMIZATION: Separate raw lagging from feature engineering
+    # Step 1: Create lags of RAW features only (126 vars × 4 lags = 504 features)
+    aux_raw = embed(Y, 4)
+    
+    # Step 2: Engineer features on CURRENT data (no lags)
+    # This gives ~4,410 features with historical info already encoded
     fe = StationaryFeatureEngineer()
-    Y_engineered = fe.get_all_features(Y, include_raw=True, skip_basic_transforms=True)
+    Y_engineered = fe.get_all_features(Y, include_raw=False, skip_basic_transforms=True)
     
-    # Handle NaN values - compute fill values from Y_engineered
-    # These are the training statistics that will be used
+    # Handle NaN values
     Y_engineered, _ = handle_missing_values(Y_engineered, strategy='mean')
     
-    # Create embedded matrix with lags
-    aux = embed(Y_engineered, 4)  # FIXED: Use fixed 4 lags, not 4 + lag
+    # Step 3: Align lengths
+    min_len = min(len(aux_raw), len(Y_engineered))
+    aux_raw = aux_raw[:min_len]
+    Y_eng_current = Y_engineered[:min_len]
     
-    # Target from original Y
-    y_target = embed(Y[:, target_col_idx].reshape(-1, 1), 4)[:, 0]  # FIXED: Use fixed 4 lags
-    
-    # Align dimensions
-    min_len = min(len(aux), len(y_target))
-    aux = aux[:min_len]
+    # Step 4: Create target from original Y
+    y_target = embed(Y[:, target_col_idx].reshape(-1, 1), 4)[:, 0]
     y_target = y_target[:min_len]
     
-    # Features (lagged values) - FIXED: embedding_depth is now 4
-    n_cols = Y_engineered.shape[1]
-    X = aux[:, n_cols * lag:]  # Use lag lags of features
-    
-    # Out-of-sample features - FIXED: logic for fixed embedding depth
+    # Step 5: Build feature matrix based on forecast horizon
     if lag == 1:
-        X_out = aux[-1, :X.shape[1]]
+        X_raw_lagged = aux_raw
     else:
-        # For lag > 1, we need to trim the embedding to get the right features
-        aux_trimmed = aux[:, :aux.shape[1] - n_cols * (lag - 1)]
-        X_out = aux_trimmed[-1, :X.shape[1]]
+        lag_start = n_raw_features * (lag - 1)
+        lag_end = lag_start + (n_raw_features * 4)
+        
+        if lag_end <= aux_raw.shape[1]:
+            X_raw_lagged = aux_raw[:, lag_start:lag_end]
+        else:
+            X_raw_lagged = aux_raw[:, lag_start:]
     
-    # Adjust for lag - FIXED: with embedding_depth=4, we need at least lag+1 observations
+    # Step 6: Combine lagged raw + current engineered
+    # Total: ~504 lagged + ~4,410 current = ~4,914 features (vs 20,000 before!)
+    X = np.hstack([X_raw_lagged, Y_eng_current])
+    X_out = X[-1, :]
+    
+    # Step 7: Adjust for forecast horizon
     y = y_target[:len(y_target) - lag + 1]
     X = X[:X.shape[0] - lag + 1, :]
     
-    # Apply 3-stage feature selection
+    # Apply 3-stage feature selection (now much faster!)
     X, selection_info = apply_3stage_feature_selection(
         X, 
         constant_threshold=CONSTANT_VARIANCE_THRESHOLD,
