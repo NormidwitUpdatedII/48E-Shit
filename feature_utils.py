@@ -229,8 +229,9 @@ def handle_missing_values(X, strategy='mean', fill_values=None):
         if fill_values is None:
             # Use forward fill instead of global mean to avoid future data leakage
             # Forward fill uses only past values at each point
+            # Fill remaining NaN with 0 instead of backward fill (which would leak future data)
             df = pd.DataFrame(X)
-            filled = df.fillna(method='ffill').fillna(method='bfill')  # bfill for very beginning
+            filled = df.fillna(method='ffill').fillna(0)
             X = filled.values
             computed_fill_values = None  # Forward fill doesn't have precomputable values
         else:

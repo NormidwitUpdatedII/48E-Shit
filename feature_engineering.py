@@ -50,9 +50,10 @@ def calculate_zscore(series, window=12):
     **DATA LEAKAGE PREVENTION:**
     Uses only PAST data at each point (excludes current observation).
     At time t, uses data from [t-window, t-1] to avoid future information.
+    Uses min_periods=window to ensure stable z-scores with sufficient historical data.
     """
-    rolling_mean = series.rolling(window=window, min_periods=1).mean().shift(1)
-    rolling_std = series.rolling(window=window, min_periods=1).std().shift(1)
+    rolling_mean = series.rolling(window=window, min_periods=window).mean().shift(1)
+    rolling_std = series.rolling(window=window, min_periods=window).std().shift(1)
     rolling_std = rolling_std.replace(0, np.nan)  # Avoid division by zero
     return (series - rolling_mean) / rolling_std
 
