@@ -20,13 +20,14 @@ DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 from utils import load_csv, save_forecasts, embed, calculate_errors, add_outlier_dummy
-from feature_engineering import StationaryFeatureEngineer
-from feature_utils import (
+from feature_engineering.feature_engineering import StationaryFeatureEngineer
+from feature_engineering.feature_utils import (
     standardize_features, 
     handle_missing_values,
     apply_3stage_feature_selection
 )
-from feature_config import (
+
+from feature_engineering.feature_config import (
     CONSTANT_VARIANCE_THRESHOLD,
     CORRELATION_THRESHOLD,
     LOW_VARIANCE_THRESHOLD
