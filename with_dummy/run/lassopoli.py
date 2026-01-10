@@ -24,7 +24,7 @@ CURRENT_PERIOD = '1990_2022'  # Change this to run different period
 DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), f'rawdata_{CURRENT_PERIOD}.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
-from with_dummy.functions.func_polilasso import lasso_rolling_window
+from with_dummy.functions.func_polilasso import polilasso_rolling_window
 from utils import load_csv, save_forecasts, add_outlier_dummy
 
 def main():
@@ -48,14 +48,12 @@ def main():
         print(f"  Lag {lag}/12...")
         
         # CPI (indice=1)
-        result_cpi = lasso_rolling_window(Y, nprev, indice=1, lag=lag, 
-                                          alpha=alpha, type_='lasso')
-        cpi_results.append(result_cpi['predictions'])
+        result_cpi = polilasso_rolling_window(Y, nprev, indice=1, lag=lag)
+        cpi_results.append(result_cpi['pred'])
         
         # PCE (indice=2)
-        result_pce = lasso_rolling_window(Y, nprev, indice=2, lag=lag,
-                                          alpha=alpha, type_='lasso')
-        pce_results.append(result_pce['predictions'])
+        result_pce = polilasso_rolling_window(Y, nprev, indice=2, lag=lag)
+        pce_results.append(result_pce['pred'])
     
     # Combine results
     cpi = np.column_stack(cpi_results)
