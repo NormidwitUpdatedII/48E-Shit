@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 # Path constants
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata.csv')
+DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata_1990_2022.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 from utils import load_csv, save_forecasts, embed, calculate_errors, add_outlier_dummy

@@ -220,7 +220,7 @@ def generate_original_sample_data(df_full, sample_name, config, output_dir):
     print(f"  Date range: {df_sample.index.min()} to {df_sample.index.max()}")
     
     # Save raw data (backward compatible name)
-    raw_path = output_dir / "rawdata.csv"
+    raw_path = output_dir / "rawdata_1990_2022.csv"
     df_sample.to_csv(raw_path, header=False, index=False)
     print(f"  Saved: rawdata.csv")
     
@@ -237,7 +237,7 @@ def generate_original_sample_data(df_full, sample_name, config, output_dir):
     print(f"    Engineered features: {features.shape[1]}")
     
     # Save feature-engineered data
-    fe_path = output_dir / "rawdata_fe.csv"
+    fe_path = output_dir / "rawdata_fe_1990_2022.csv"
     np.savetxt(fe_path, features, delimiter=',')
     print(f"  Saved: rawdata_fe.csv")
     
@@ -344,7 +344,7 @@ def get_sample_data_path(sample_dir, period=None, feature_engineered=False):
     
     if period is None:
         # Original data
-        filename = "rawdata_fe.csv" if feature_engineered else "rawdata.csv"
+        filename = "rawdata_fe_1990_2022.csv" if feature_engineered else "rawdata_1990_2022.csv"
     else:
         # Period-specific data
         filename = f"rawdata_fe_{period}.csv" if feature_engineered else f"rawdata_{period}.csv"

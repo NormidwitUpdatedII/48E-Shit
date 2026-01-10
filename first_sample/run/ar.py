@@ -14,7 +14,7 @@ from first_sample.functions.func_ar import ar_rolling_window
 
 # Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(SCRIPT_DIR, '..', 'rawdata.csv')
+DATA_PATH = os.path.join(SCRIPT_DIR, '..', 'rawdata_1990_2022.csv')
 FORECAST_DIR = os.path.join(SCRIPT_DIR, '..', 'forecasts')
 
 

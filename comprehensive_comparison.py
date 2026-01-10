@@ -1134,8 +1134,8 @@ def main():
     print("LOADING DATA")
     print("="*80)
     
-    first_sample_path = os.path.join(SCRIPT_DIR, 'first_sample', 'rawdata.csv')
-    second_sample_path = os.path.join(SCRIPT_DIR, 'second_sample', 'rawdata.csv')
+    first_sample_path = os.path.join(SCRIPT_DIR, 'first_sample', 'rawdata_1990_2022.csv')
+    second_sample_path = os.path.join(SCRIPT_DIR, 'second_sample', 'rawdata_1990_2022.csv')
     
     Y_first = load_csv(first_sample_path)
     Y_second = load_csv(second_sample_path)

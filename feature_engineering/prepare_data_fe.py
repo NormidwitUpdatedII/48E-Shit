@@ -83,7 +83,7 @@ def prepare_first_sample(fred_md_path=None, output_dir=None, apply_fe=True, use_
     
     if use_existing:
         # Use existing rawdata.csv (already FRED-MD transformed)
-        existing_path = output_dir / "rawdata.csv"
+        existing_path = output_dir / "rawdata_1990_2022.csv"
         if existing_path.exists():
             print(f"Using existing transformed data: {existing_path}")
             df_sample = pd.read_csv(existing_path, header=None)
@@ -130,7 +130,7 @@ def prepare_first_sample(fred_md_path=None, output_dir=None, apply_fe=True, use_
         print(f"  Engineered features: {features.shape[1]}")
         
         # Save engineered features
-        output_path = output_dir / "rawdata_fe.csv"
+        output_path = output_dir / "rawdata_fe_1990_2022.csv"
         np.savetxt(output_path, features, delimiter=',')
         print(f"  Saved to: {output_path}")
         
@@ -176,7 +176,7 @@ def prepare_second_sample(fred_md_path=None, output_dir=None, apply_fe=True, use
     
     if use_existing:
         # Use existing rawdata.csv (already FRED-MD transformed)
-        existing_path = output_dir / "rawdata.csv"
+        existing_path = output_dir / "rawdata_1990_2022.csv"
         if existing_path.exists():
             print(f"Using existing transformed data: {existing_path}")
             df_sample = pd.read_csv(existing_path, header=None)
@@ -218,7 +218,7 @@ def prepare_second_sample(fred_md_path=None, output_dir=None, apply_fe=True, use
         print(f"  Engineered features: {features.shape[1]}")
         
         # Save engineered features
-        output_path = output_dir / "rawdata_fe.csv"
+        output_path = output_dir / "rawdata_fe_1990_2022.csv"
         np.savetxt(output_path, features, delimiter=',')
         print(f"  Saved to: {output_path}")
         
@@ -271,7 +271,7 @@ def main():
     # Prepare first sample (use existing transformed data)
     try:
         data1, info1 = prepare_first_sample(use_existing=True, apply_fe=True)
-        original_first = project_root / "first_sample" / "rawdata.csv"
+        original_first = project_root / "first_sample" / "rawdata_1990_2022.csv"
         if original_first.exists():
             compare_with_original(str(original_first), data1)
     except FileNotFoundError as e:
@@ -280,7 +280,7 @@ def main():
     # Prepare second sample (use existing transformed data)
     try:
         data2, info2 = prepare_second_sample(use_existing=True, apply_fe=True)
-        original_second = project_root / "second_sample" / "rawdata.csv"
+        original_second = project_root / "second_sample" / "rawdata_1990_2022.csv"
         if original_second.exists():
             compare_with_original(str(original_second), data2)
     except FileNotFoundError as e:

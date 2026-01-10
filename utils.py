@@ -287,7 +287,7 @@ def add_outlier_dummy(Y, target_col=0):
     
     Example:
     --------
-    >>> Y = load_csv('rawdata.csv')
+    >>> Y = load_csv('rawdata_1990_2022.csv')
     >>> Y = add_outlier_dummy(Y, target_col=0)  # CPI is column 0 (1 in R indexing)
     """
     Y = np.array(Y)
