@@ -25,14 +25,13 @@ sys.path.append(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
 sys.path.append(os.path.dirname(SCRIPT_DIR))
 
 from utils import load_csv, save_forecasts
-from functions.func_rw import rw_rolling_window
+from with_dummy.functions.func_rw import rw_rolling_window
 
 # Parameters
 nprev = PERIOD_CONFIG[CURRENT_PERIOD]['nprev']  # Out-of-sample forecasts for second sample (consistent with other models)
 
 # Load data
-data = load_csv(DATA_PATH)
-Y = data.values
+Y = load_csv(DATA_PATH)
 
 # Create forecast directory if it doesn't exist
 os.makedirs(FORECAST_DIR, exist_ok=True)
