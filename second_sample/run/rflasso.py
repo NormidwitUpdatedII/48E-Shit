@@ -29,6 +29,8 @@ def main():
     np.random.seed(123)
     
     results = {}
+    rmse_cpi = {}
+    rmse_pce = {}
     
     # RF-LASSO models
     print("Running RF-LASSO models...")
@@ -36,6 +38,8 @@ def main():
         print(f"  RFLASSO lag={lag}")
         results[f'rflasso{lag}c'] = rflasso_rolling_window(Y, nprev, indice=1, lag=lag)
         results[f'rflasso{lag}p'] = rflasso_rolling_window(Y, nprev, indice=2, lag=lag)
+        rmse_cpi[lag] = results[f'rflasso{lag}c']['errors']['rmse']
+        rmse_pce[lag] = results[f'rflasso{lag}p']['errors']['rmse']
     
     # Combine results
     cpi_rflasso = np.column_stack([results[f'rflasso{lag}c']['pred'] for lag in range(1, 13)])
@@ -49,6 +53,14 @@ def main():
     save_forecasts(pce_rflasso, os.path.join(FORECAST_DIR, 'rflasso-pce.csv'))
     
     print(f"Done! Forecasts saved to {FORECAST_DIR}")
+    # Print RMSE by horizon
+    print("
+RMSE BY HORIZON:")
+    print(f"{'Horizon':<8} {'CPI':<12} {'PCE':<12}")
+    for h in range(1, 13):
+        print(f"h={h:<6} {rmse_cpi.get(h, 0):<12.6f} {rmse_pce.get(h, 0):<12.6f}")
+    print(f"Average: {np.mean(list(rmse_cpi.values())):.6f}  {np.mean(list(rmse_pce.values())):.6f}")
+
     
     return results
 

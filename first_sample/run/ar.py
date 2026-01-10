@@ -1,5 +1,6 @@
 """
 AR Model Rolling Window Forecasts
+Estimates RMSE for all horizons h1-h12
 """
 import os
 import sys
@@ -25,20 +26,59 @@ def main():
     nprev = 132
     
     results = {}
+    rmse_fixed_cpi = {}
+    rmse_fixed_pce = {}
+    rmse_bic_cpi = {}
+    rmse_bic_pce = {}
     
     # Fixed AR models
-    print("Running fixed AR models...")
+    print("=" * 60)
+    print("AR (Fixed) - RMSE by Horizon (h1-h12)")
+    print("=" * 60)
     for lag in range(1, 13):
-        print(f"  AR lag={lag}")
+        print(f"  Running h={lag}...")
         results[f'ar{lag}c'] = ar_rolling_window(Y, nprev, indice=1, lag=lag, model_type='fixed')
         results[f'ar{lag}p'] = ar_rolling_window(Y, nprev, indice=2, lag=lag, model_type='fixed')
+        rmse_fixed_cpi[lag] = results[f'ar{lag}c']['errors']['rmse']
+        rmse_fixed_pce[lag] = results[f'ar{lag}p']['errors']['rmse']
+    
+    # Print Fixed AR RMSE summary
+    print("\n" + "=" * 60)
+    print("RMSE BY HORIZON - AR (Fixed)")
+    print("=" * 60)
+    print(f"{'Horizon':<10} {'CPI RMSE':<15} {'PCE RMSE':<15}")
+    print("-" * 40)
+    for h in range(1, 13):
+        print(f"h={h:<7} {rmse_fixed_cpi[h]:<15.6f} {rmse_fixed_pce[h]:<15.6f}")
+    avg_cpi = np.mean(list(rmse_fixed_cpi.values()))
+    avg_pce = np.mean(list(rmse_fixed_pce.values()))
+    print("-" * 40)
+    print(f"{'Average':<10} {avg_cpi:<15.6f} {avg_pce:<15.6f}")
     
     # BIC AR models
-    print("Running BIC AR models...")
+    print("\n" + "=" * 60)
+    print("AR (BIC) - RMSE by Horizon (h1-h12)")
+    print("=" * 60)
     for lag in range(1, 13):
-        print(f"  BIC AR lag={lag}")
+        print(f"  Running h={lag}...")
         results[f'bar{lag}c'] = ar_rolling_window(Y, nprev, indice=1, lag=lag, model_type='bic')
         results[f'bar{lag}p'] = ar_rolling_window(Y, nprev, indice=2, lag=lag, model_type='bic')
+        rmse_bic_cpi[lag] = results[f'bar{lag}c']['errors']['rmse']
+        rmse_bic_pce[lag] = results[f'bar{lag}p']['errors']['rmse']
+    
+    # Print BIC AR RMSE summary
+    print("\n" + "=" * 60)
+    print("RMSE BY HORIZON - AR (BIC)")
+    print("=" * 60)
+    print(f"{'Horizon':<10} {'CPI RMSE':<15} {'PCE RMSE':<15}")
+    print("-" * 40)
+    for h in range(1, 13):
+        print(f"h={h:<7} {rmse_bic_cpi[h]:<15.6f} {rmse_bic_pce[h]:<15.6f}")
+    avg_cpi = np.mean(list(rmse_bic_cpi.values()))
+    avg_pce = np.mean(list(rmse_bic_pce.values()))
+    print("-" * 40)
+    print(f"{'Average':<10} {avg_cpi:<15.6f} {avg_pce:<15.6f}")
+    print("=" * 60)
     
     # Combine results for CPI (indice=1)
     cpi_fixed = np.column_stack([results[f'ar{lag}c']['pred'] for lag in range(1, 13)])
@@ -57,7 +97,22 @@ def main():
     save_forecasts(cpi_bic, os.path.join(FORECAST_DIR, 'ar-bic-cpi.csv'))
     save_forecasts(pce_bic, os.path.join(FORECAST_DIR, 'ar-bic-pce.csv'))
     
-    print(f"Done! Forecasts saved to {FORECAST_DIR}")
+    # Save RMSE summaries
+    rmse_fixed_df = pd.DataFrame({
+        'Horizon': list(range(1, 13)),
+        'CPI_RMSE': [rmse_fixed_cpi[h] for h in range(1, 13)],
+        'PCE_RMSE': [rmse_fixed_pce[h] for h in range(1, 13)]
+    })
+    rmse_fixed_df.to_csv(os.path.join(FORECAST_DIR, 'ar-fixed-rmse.csv'), index=False)
+    
+    rmse_bic_df = pd.DataFrame({
+        'Horizon': list(range(1, 13)),
+        'CPI_RMSE': [rmse_bic_cpi[h] for h in range(1, 13)],
+        'PCE_RMSE': [rmse_bic_pce[h] for h in range(1, 13)]
+    })
+    rmse_bic_df.to_csv(os.path.join(FORECAST_DIR, 'ar-bic-rmse.csv'), index=False)
+    
+    print(f"\nForecasts saved to {FORECAST_DIR}")
     
     return results
 

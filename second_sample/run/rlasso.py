@@ -27,13 +27,19 @@ def main():
     alpha = 1
     
     results = {}
+    rmse_cpi = {}
+    rmse_pce = {}
     pols_results = {}
+    rmse_cpi = {}
+    rmse_pce = {}
     
     print("Running LASSO models...")
     for lag in range(1, 13):
         print(f"  LASSO lag={lag}")
         results[f'lasso{lag}c'] = lasso_rolling_window(Y, nprev, indice=1, lag=lag, alpha=alpha, type_='lasso')
         results[f'lasso{lag}p'] = lasso_rolling_window(Y, nprev, indice=2, lag=lag, alpha=alpha, type_='lasso')
+        rmse_cpi[lag] = results[f'lasso{lag}c']['errors']['rmse']
+        rmse_pce[lag] = results[f'lasso{lag}p']['errors']['rmse']
     
     print("Running POLS models...")
     for lag in range(1, 13):
@@ -57,6 +63,14 @@ def main():
     save_forecasts(pce_pols, os.path.join(FORECAST_DIR, 'pols-lasso-pce.csv'))
     
     print(f"Done! Forecasts saved to {FORECAST_DIR}")
+    # Print RMSE by horizon
+    print("
+RMSE BY HORIZON:")
+    print(f"{'Horizon':<8} {'CPI':<12} {'PCE':<12}")
+    for h in range(1, 13):
+        print(f"h={h:<6} {rmse_cpi.get(h, 0):<12.6f} {rmse_pce.get(h, 0):<12.6f}")
+    print(f"Average: {np.mean(list(rmse_cpi.values())):.6f}  {np.mean(list(rmse_pce.values())):.6f}")
+
     return results, pols_results
 
 

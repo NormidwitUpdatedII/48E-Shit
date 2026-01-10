@@ -25,6 +25,8 @@ def main():
     nprev = 132
     
     results = {}
+    rmse_cpi = {}
+    rmse_pce = {}
     
     # Factor models
     print("Running Factor models...")
@@ -32,6 +34,8 @@ def main():
         print(f"  Factors lag={lag}")
         results[f'fact{lag}c'] = fact_rolling_window(Y, nprev, indice=1, lag=lag)
         results[f'fact{lag}p'] = fact_rolling_window(Y, nprev, indice=2, lag=lag)
+        rmse_cpi[lag] = results[f'fact{lag}c']['errors']['rmse']
+        rmse_pce[lag] = results[f'fact{lag}p']['errors']['rmse']
     
     # Combine results for CPI (indice=1)
     cpi_fact = np.column_stack([results[f'fact{lag}c']['pred'] for lag in range(1, 13)])
@@ -47,6 +51,14 @@ def main():
     save_forecasts(pce_fact, os.path.join(FORECAST_DIR, 'factors-pce.csv'))
     
     print(f"Done! Forecasts saved to {FORECAST_DIR}")
+    # Print RMSE by horizon
+    print("
+RMSE BY HORIZON:")
+    print(f"{'Horizon':<8} {'CPI':<12} {'PCE':<12}")
+    for h in range(1, 13):
+        print(f"h={h:<6} {rmse_cpi.get(h, 0):<12.6f} {rmse_pce.get(h, 0):<12.6f}")
+    print(f"Average: {np.mean(list(rmse_cpi.values())):.6f}  {np.mean(list(rmse_pce.values())):.6f}")
+
     
     return results
 
