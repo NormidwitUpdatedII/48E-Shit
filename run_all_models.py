@@ -74,11 +74,6 @@ AVAILABLE_MODELS = {
     'nn': 'Neural Networks',
     'boosting': 'Gradient Boosting',
     'bagging': 'Bagging',
-    
-    # Feature engineered models
-    'rf_fe': 'Random Forest + Feature Engineering',
-    'xgb_fe': 'XGBoost + Feature Engineering',
-    'lstm_fe': 'LSTM + Feature Engineering',
 }
 
 
@@ -86,21 +81,21 @@ AVAILABLE_MODELS = {
 # DATA LOADING
 # =============================================================================
 
-def get_data_path(sample_dir, period=None, feature_engineered=False):
+def get_data_path(sample_dir, period=None):
     """Get path to data file for given sample and period."""
     base_dir = PROJECT_ROOT / sample_dir
     
     if period is None or period == 'original':
-        filename = 'rawdata_fe_1990_2022.csv' if feature_engineered else 'rawdata_1990_2022.csv'
+        filename = 'rawdata_1990_2022.csv'
     else:
-        filename = f'rawdata_fe_{period}.csv' if feature_engineered else f'rawdata_{period}.csv'
+        filename = f'rawdata_{period}.csv'
     
     return base_dir / filename
 
 
-def load_data(sample_dir, period=None, feature_engineered=False):
+def load_data(sample_dir, period=None):
     """Load data for given sample and period."""
-    path = get_data_path(sample_dir, period, feature_engineered)
+    path = get_data_path(sample_dir, period)
     
     if not path.exists():
         raise FileNotFoundError(f"Data file not found: {path}")
@@ -142,12 +137,9 @@ def run_model(model_name, sample_dir, period=None, horizons=range(1, 13)):
     """
     print(f"\n  Running {model_name} on {sample_dir}/{period or 'original'}...")
     
-    # Determine if we need feature engineered data
-    needs_fe = model_name.endswith('_fe')
-    
     # Load data
     try:
-        Y = load_data(sample_dir, period, needs_fe)
+        Y = load_data(sample_dir, period)
     except FileNotFoundError as e:
         print(f"    ERROR: {e}")
         return None
@@ -181,44 +173,11 @@ def run_model(model_name, sample_dir, period=None, horizons=range(1, 13)):
             for lag in horizons:
                 results[f'rf{lag}c'] = rf_rolling_window(Y, nprev, indice=1, lag=lag)
                 results[f'rf{lag}p'] = rf_rolling_window(Y, nprev, indice=2, lag=lag)
-                
-        elif model_name == 'rf_fe':
-            # Run feature-engineered Random Forest
-            if sample_dir == 'without_dummy':
-                from without_dummy.run.rf_fe import run_rf_fe
-            else:
-                from with_dummy.run.rf_fe import run_rf_fe
-            for lag in horizons:
-                result = run_rf_fe(Y, nprev, indice=1, lag=lag)
-                results[f'rf_fe{lag}c'] = result
-                result = run_rf_fe(Y, nprev, indice=2, lag=lag)
-                results[f'rf_fe{lag}p'] = result
-                
-        elif model_name == 'xgb_fe':
-            if sample_dir == 'without_dummy':
-                from without_dummy.run.xgb_fe import run_xgb_fe
-            else:
-                from with_dummy.run.xgb_fe import run_xgb_fe
-            for lag in horizons:
-                result = run_xgb_fe(Y, nprev, indice=1, lag=lag)
-                results[f'xgb_fe{lag}c'] = result
-                result = run_xgb_fe(Y, nprev, indice=2, lag=lag)
-                results[f'xgb_fe{lag}p'] = result
-                
-        elif model_name == 'lstm_fe':
-            if sample_dir == 'without_dummy':
-                from without_dummy.run.lstm_fe import run_lstm_fe
-            else:
-                from with_dummy.run.lstm_fe import run_lstm_fe
-            for lag in horizons:
-                result = run_lstm_fe(Y, nprev, indice=1, lag=lag)
-                results[f'lstm_fe{lag}c'] = result
-                result = run_lstm_fe(Y, nprev, indice=2, lag=lag)
-                results[f'lstm_fe{lag}p'] = result
         
         else:
             print(f"    Model {model_name} not yet implemented in master runner")
             return None
+
             
     except ImportError as e:
         print(f"    Import error: {e}")
