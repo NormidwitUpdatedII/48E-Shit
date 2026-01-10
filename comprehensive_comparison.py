@@ -1,7 +1,7 @@
 """
 Comprehensive Model Comparison Report
 =====================================
-This script runs ALL available forecasting models on both first_sample and second_sample
+This script runs ALL available forecasting models on both without_dummy and with_dummy
 datasets, computes out-of-sample RMSE and MAE for each model, and generates
 detailed comparison reports with visualizations.
 
@@ -68,108 +68,108 @@ print(f"\nReport Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 print("\nLoading model functions...")
 
 # Core models - FIRST SAMPLE
-from first_sample.functions.func_rw import rw_rolling_window as rw_rolling_window_first
-from first_sample.functions.func_ar import ar_rolling_window as ar_rolling_window_first
-from first_sample.functions.func_lasso import lasso_rolling_window as lasso_rolling_window_first
-from first_sample.functions.func_rf import rf_rolling_window as rf_rolling_window_first
-from first_sample.functions.func_xgb import xgb_rolling_window as xgb_rolling_window_first
-from first_sample.functions.func_nn import nn_rolling_window as nn_rolling_window_first
-from first_sample.functions.func_boosting import boosting_rolling_window as boosting_rolling_window_first
-from first_sample.functions.func_bag import bagg_rolling_window as bagg_rolling_window_first
-from first_sample.functions.func_csr import csr_rolling_window as csr_rolling_window_first
-from first_sample.functions.func_fact import fact_rolling_window as fact_rolling_window_first
-from first_sample.functions.func_tfact import tfact_rolling_window as tfact_rolling_window_first
-from first_sample.functions.func_scad import scad_rolling_window as scad_rolling_window_first
-from first_sample.functions.func_jn import jackknife_rolling_window as jackknife_rolling_window_first
-from first_sample.functions.func_rfols import rfols_rolling_window as rfols_rolling_window_first
-from first_sample.functions.func_adalassorf import adalasso_rf_rolling_window as adalasso_rf_rolling_window_first
-from first_sample.functions.func_polilasso import polilasso_rolling_window as polilasso_rolling_window_first
+from without_dummy.functions.func_rw import rw_rolling_window as rw_rolling_window_first
+from without_dummy.functions.func_ar import ar_rolling_window as ar_rolling_window_first
+from without_dummy.functions.func_lasso import lasso_rolling_window as lasso_rolling_window_first
+from without_dummy.functions.func_rf import rf_rolling_window as rf_rolling_window_first
+from without_dummy.functions.func_xgb import xgb_rolling_window as xgb_rolling_window_first
+from without_dummy.functions.func_nn import nn_rolling_window as nn_rolling_window_first
+from without_dummy.functions.func_boosting import boosting_rolling_window as boosting_rolling_window_first
+from without_dummy.functions.func_bag import bagg_rolling_window as bagg_rolling_window_first
+from without_dummy.functions.func_csr import csr_rolling_window as csr_rolling_window_first
+from without_dummy.functions.func_fact import fact_rolling_window as fact_rolling_window_first
+from without_dummy.functions.func_tfact import tfact_rolling_window as tfact_rolling_window_first
+from without_dummy.functions.func_scad import scad_rolling_window as scad_rolling_window_first
+from without_dummy.functions.func_jn import jackknife_rolling_window as jackknife_rolling_window_first
+from without_dummy.functions.func_rfols import rfols_rolling_window as rfols_rolling_window_first
+from without_dummy.functions.func_adalassorf import adalasso_rf_rolling_window as adalasso_rf_rolling_window_first
+from without_dummy.functions.func_polilasso import polilasso_rolling_window as polilasso_rolling_window_first
 
 # Core models - SECOND SAMPLE
-from second_sample.functions.func_rw import rw_rolling_window as rw_rolling_window_second
-from second_sample.functions.func_ar import ar_rolling_window as ar_rolling_window_second
-from second_sample.functions.func_lasso import lasso_rolling_window as lasso_rolling_window_second
-from second_sample.functions.func_rf import rf_rolling_window as rf_rolling_window_second
-from second_sample.functions.func_xgb import xgb_rolling_window as xgb_rolling_window_second
-from second_sample.functions.func_nn import nn_rolling_window as nn_rolling_window_second
-from second_sample.functions.func_boosting import boosting_rolling_window as boosting_rolling_window_second
-from second_sample.functions.func_bag import bagg_rolling_window as bagg_rolling_window_second
-from second_sample.functions.func_csr import csr_rolling_window as csr_rolling_window_second
-from second_sample.functions.func_fact import fact_rolling_window as fact_rolling_window_second
-from second_sample.functions.func_tfact import tfact_rolling_window as tfact_rolling_window_second
-from second_sample.functions.func_scad import scad_rolling_window as scad_rolling_window_second
-from second_sample.functions.func_jn import jackknife_rolling_window as jackknife_rolling_window_second
-from second_sample.functions.func_rfols import rfols_rolling_window as rfols_rolling_window_second
-from second_sample.functions.func_adalassorf import adalasso_rf_rolling_window as adalasso_rf_rolling_window_second
-from second_sample.functions.func_polilasso import polilasso_rolling_window as polilasso_rolling_window_second
+from with_dummy.functions.func_rw import rw_rolling_window as rw_rolling_window_second
+from with_dummy.functions.func_ar import ar_rolling_window as ar_rolling_window_second
+from with_dummy.functions.func_lasso import lasso_rolling_window as lasso_rolling_window_second
+from with_dummy.functions.func_rf import rf_rolling_window as rf_rolling_window_second
+from with_dummy.functions.func_xgb import xgb_rolling_window as xgb_rolling_window_second
+from with_dummy.functions.func_nn import nn_rolling_window as nn_rolling_window_second
+from with_dummy.functions.func_boosting import boosting_rolling_window as boosting_rolling_window_second
+from with_dummy.functions.func_bag import bagg_rolling_window as bagg_rolling_window_second
+from with_dummy.functions.func_csr import csr_rolling_window as csr_rolling_window_second
+from with_dummy.functions.func_fact import fact_rolling_window as fact_rolling_window_second
+from with_dummy.functions.func_tfact import tfact_rolling_window as tfact_rolling_window_second
+from with_dummy.functions.func_scad import scad_rolling_window as scad_rolling_window_second
+from with_dummy.functions.func_jn import jackknife_rolling_window as jackknife_rolling_window_second
+from with_dummy.functions.func_rfols import rfols_rolling_window as rfols_rolling_window_second
+from with_dummy.functions.func_adalassorf import adalasso_rf_rolling_window as adalasso_rf_rolling_window_second
+from with_dummy.functions.func_polilasso import polilasso_rolling_window as polilasso_rolling_window_second
 
 # Try to import LSTM (requires TensorFlow)
 try:
-    from first_sample.functions.func_lstm import lstm_rolling_window as lstm_rolling_window_first
+    from without_dummy.functions.func_lstm import lstm_rolling_window as lstm_rolling_window_first
     LSTM_FIRST_AVAILABLE = True
-    print("  ✓ LSTM model (first_sample) available")
+    print("  ✓ LSTM model (without_dummy) available")
 except ImportError as e:
     LSTM_FIRST_AVAILABLE = False
-    print(f"  ✗ LSTM model (first_sample) unavailable: {e}")
+    print(f"  ✗ LSTM model (without_dummy) unavailable: {e}")
 
 try:
-    from second_sample.functions.func_lstm import lstm_rolling_window as lstm_rolling_window_second
+    from with_dummy.functions.func_lstm import lstm_rolling_window as lstm_rolling_window_second
     LSTM_SECOND_AVAILABLE = True
-    print("  ✓ LSTM model (second_sample) available")
+    print("  ✓ LSTM model (with_dummy) available")
 except ImportError as e:
     LSTM_SECOND_AVAILABLE = False
-    print(f"  ✗ LSTM model (second_sample) unavailable: {e}")
+    print(f"  ✗ LSTM model (with_dummy) unavailable: {e}")
 
 # Import Feature-Engineered model functions from run scripts
 # First Sample FE models
 try:
-    from first_sample.run.rf_fe import rf_fe_rolling_window as rf_fe_rolling_window_first
+    from without_dummy.run.rf_fe import rf_fe_rolling_window as rf_fe_rolling_window_first
     RF_FE_FIRST_AVAILABLE = True
-    print("  ✓ RF-FE (first_sample) model available")
+    print("  ✓ RF-FE (without_dummy) model available")
 except ImportError as e:
     RF_FE_FIRST_AVAILABLE = False
-    print(f"  ✗ RF-FE (first_sample) model unavailable: {e}")
+    print(f"  ✗ RF-FE (without_dummy) model unavailable: {e}")
 
 try:
-    from first_sample.run.xgb_fe import xgb_fe_rolling_window as xgb_fe_rolling_window_first
+    from without_dummy.run.xgb_fe import xgb_fe_rolling_window as xgb_fe_rolling_window_first
     XGB_FE_FIRST_AVAILABLE = True
-    print("  ✓ XGB-FE (first_sample) model available")
+    print("  ✓ XGB-FE (without_dummy) model available")
 except ImportError as e:
     XGB_FE_FIRST_AVAILABLE = False
-    print(f"  ✗ XGB-FE (first_sample) model unavailable: {e}")
+    print(f"  ✗ XGB-FE (without_dummy) model unavailable: {e}")
 
 try:
-    from first_sample.run.lstm_fe import lstm_fe_rolling_window as lstm_fe_rolling_window_first
+    from without_dummy.run.lstm_fe import lstm_fe_rolling_window as lstm_fe_rolling_window_first
     LSTM_FE_FIRST_AVAILABLE = True
-    print("  ✓ LSTM-FE (first_sample) model available")
+    print("  ✓ LSTM-FE (without_dummy) model available")
 except ImportError as e:
     LSTM_FE_FIRST_AVAILABLE = False
-    print(f"  ✗ LSTM-FE (first_sample) model unavailable: {e}")
+    print(f"  ✗ LSTM-FE (without_dummy) model unavailable: {e}")
 
 # Second Sample FE models
 try:
-    from second_sample.run.rf_fe import rf_fe_rolling_window as rf_fe_rolling_window_second
+    from with_dummy.run.rf_fe import rf_fe_rolling_window as rf_fe_rolling_window_second
     RF_FE_SECOND_AVAILABLE = True
-    print("  ✓ RF-FE (second_sample) model available")
+    print("  ✓ RF-FE (with_dummy) model available")
 except ImportError as e:
     RF_FE_SECOND_AVAILABLE = False
-    print(f"  ✗ RF-FE (second_sample) model unavailable: {e}")
+    print(f"  ✗ RF-FE (with_dummy) model unavailable: {e}")
 
 try:
-    from second_sample.run.xgb_fe import xgb_fe_rolling_window as xgb_fe_rolling_window_second
+    from with_dummy.run.xgb_fe import xgb_fe_rolling_window as xgb_fe_rolling_window_second
     XGB_FE_SECOND_AVAILABLE = True
-    print("  ✓ XGB-FE (second_sample) model available")
+    print("  ✓ XGB-FE (with_dummy) model available")
 except ImportError as e:
     XGB_FE_SECOND_AVAILABLE = False
-    print(f"  ✗ XGB-FE (second_sample) model unavailable: {e}")
+    print(f"  ✗ XGB-FE (with_dummy) model unavailable: {e}")
 
 try:
-    from second_sample.run.lstm_fe import lstm_fe_rolling_window as lstm_fe_rolling_window_second
+    from with_dummy.run.lstm_fe import lstm_fe_rolling_window as lstm_fe_rolling_window_second
     LSTM_FE_SECOND_AVAILABLE = True
-    print("  ✓ LSTM-FE (second_sample) model available")
+    print("  ✓ LSTM-FE (with_dummy) model available")
 except ImportError as e:
     LSTM_FE_SECOND_AVAILABLE = False
-    print(f"  ✗ LSTM-FE (second_sample) model unavailable: {e}")
+    print(f"  ✗ LSTM-FE (with_dummy) model unavailable: {e}")
 
 print("  ✓ All other models loaded successfully")
 
@@ -261,31 +261,31 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     target_name = "CPI" if indice == 1 else "PCE"
     
     # Determine which sample's functions to use
-    is_first_sample = "First" in sample_name or "first" in sample_name
+    is_without_dummy = "First" in sample_name or "first" in sample_name
     
     # Select appropriate function set
-    rw_rolling_window = rw_rolling_window_first if is_first_sample else rw_rolling_window_second
-    ar_rolling_window = ar_rolling_window_first if is_first_sample else ar_rolling_window_second
-    lasso_rolling_window = lasso_rolling_window_first if is_first_sample else lasso_rolling_window_second
-    rf_rolling_window = rf_rolling_window_first if is_first_sample else rf_rolling_window_second
-    xgb_rolling_window = xgb_rolling_window_first if is_first_sample else xgb_rolling_window_second
-    nn_rolling_window = nn_rolling_window_first if is_first_sample else nn_rolling_window_second
-    boosting_rolling_window = boosting_rolling_window_first if is_first_sample else boosting_rolling_window_second
-    bagg_rolling_window = bagg_rolling_window_first if is_first_sample else bagg_rolling_window_second
-    csr_rolling_window = csr_rolling_window_first if is_first_sample else csr_rolling_window_second
-    fact_rolling_window = fact_rolling_window_first if is_first_sample else fact_rolling_window_second
-    tfact_rolling_window = tfact_rolling_window_first if is_first_sample else tfact_rolling_window_second
-    scad_rolling_window = scad_rolling_window_first if is_first_sample else scad_rolling_window_second
-    jackknife_rolling_window = jackknife_rolling_window_first if is_first_sample else jackknife_rolling_window_second
-    rfols_rolling_window = rfols_rolling_window_first if is_first_sample else rfols_rolling_window_second
-    adalasso_rf_rolling_window = adalasso_rf_rolling_window_first if is_first_sample else adalasso_rf_rolling_window_second
-    polilasso_rolling_window = polilasso_rolling_window_first if is_first_sample else polilasso_rolling_window_second
-    lstm_rolling_window = lstm_rolling_window_first if is_first_sample else lstm_rolling_window_second
-    LSTM_AVAILABLE = LSTM_FIRST_AVAILABLE if is_first_sample else LSTM_SECOND_AVAILABLE
+    rw_rolling_window = rw_rolling_window_first if is_without_dummy else rw_rolling_window_second
+    ar_rolling_window = ar_rolling_window_first if is_without_dummy else ar_rolling_window_second
+    lasso_rolling_window = lasso_rolling_window_first if is_without_dummy else lasso_rolling_window_second
+    rf_rolling_window = rf_rolling_window_first if is_without_dummy else rf_rolling_window_second
+    xgb_rolling_window = xgb_rolling_window_first if is_without_dummy else xgb_rolling_window_second
+    nn_rolling_window = nn_rolling_window_first if is_without_dummy else nn_rolling_window_second
+    boosting_rolling_window = boosting_rolling_window_first if is_without_dummy else boosting_rolling_window_second
+    bagg_rolling_window = bagg_rolling_window_first if is_without_dummy else bagg_rolling_window_second
+    csr_rolling_window = csr_rolling_window_first if is_without_dummy else csr_rolling_window_second
+    fact_rolling_window = fact_rolling_window_first if is_without_dummy else fact_rolling_window_second
+    tfact_rolling_window = tfact_rolling_window_first if is_without_dummy else tfact_rolling_window_second
+    scad_rolling_window = scad_rolling_window_first if is_without_dummy else scad_rolling_window_second
+    jackknife_rolling_window = jackknife_rolling_window_first if is_without_dummy else jackknife_rolling_window_second
+    rfols_rolling_window = rfols_rolling_window_first if is_without_dummy else rfols_rolling_window_second
+    adalasso_rf_rolling_window = adalasso_rf_rolling_window_first if is_without_dummy else adalasso_rf_rolling_window_second
+    polilasso_rolling_window = polilasso_rolling_window_first if is_without_dummy else polilasso_rolling_window_second
+    lstm_rolling_window = lstm_rolling_window_first if is_without_dummy else lstm_rolling_window_second
+    LSTM_AVAILABLE = LSTM_FIRST_AVAILABLE if is_without_dummy else LSTM_SECOND_AVAILABLE
     
     print(f"\n{'='*60}")
     print(f"Running models for {sample_name} - {target_name}")
-    print(f"Using {'first_sample' if is_first_sample else 'second_sample'} functions")
+    print(f"Using {'without_dummy' if is_without_dummy else 'with_dummy'} functions")
     print(f"{'='*60}")
     print(f"Data shape: {Y.shape}")
     print(f"Out-of-sample periods: {nprev}")
@@ -727,8 +727,8 @@ def run_all_models(Y, nprev, sample_name, indice=1):
     # =========================================================================
     
     # RF with Feature Engineering
-    rf_fe_func = rf_fe_rolling_window_first if is_first_sample else rf_fe_rolling_window_second
-    rf_fe_available = RF_FE_FIRST_AVAILABLE if is_first_sample else RF_FE_SECOND_AVAILABLE
+    rf_fe_func = rf_fe_rolling_window_first if is_without_dummy else rf_fe_rolling_window_second
+    rf_fe_available = RF_FE_FIRST_AVAILABLE if is_without_dummy else RF_FE_SECOND_AVAILABLE
     
     if rf_fe_available:
         print("\n--- Random Forest with Feature Engineering ---")
@@ -749,8 +749,8 @@ def run_all_models(Y, nprev, sample_name, indice=1):
                 forecast_data[f'RF-FE({lag})'] = {'pred': res['pred'], 'real': res['real']}
     
     # XGBoost with Feature Engineering
-    xgb_fe_func = xgb_fe_rolling_window_first if is_first_sample else xgb_fe_rolling_window_second
-    xgb_fe_available = XGB_FE_FIRST_AVAILABLE if is_first_sample else XGB_FE_SECOND_AVAILABLE
+    xgb_fe_func = xgb_fe_rolling_window_first if is_without_dummy else xgb_fe_rolling_window_second
+    xgb_fe_available = XGB_FE_FIRST_AVAILABLE if is_without_dummy else XGB_FE_SECOND_AVAILABLE
     
     if xgb_fe_available:
         print("\n--- XGBoost with Feature Engineering ---")
@@ -771,8 +771,8 @@ def run_all_models(Y, nprev, sample_name, indice=1):
                 forecast_data[f'XGB-FE({lag})'] = {'pred': res['pred'], 'real': res['real']}
     
     # LSTM with Feature Engineering
-    lstm_fe_func = lstm_fe_rolling_window_first if is_first_sample else lstm_fe_rolling_window_second
-    lstm_fe_available = LSTM_FE_FIRST_AVAILABLE if is_first_sample else LSTM_FE_SECOND_AVAILABLE
+    lstm_fe_func = lstm_fe_rolling_window_first if is_without_dummy else lstm_fe_rolling_window_second
+    lstm_fe_available = LSTM_FE_FIRST_AVAILABLE if is_without_dummy else LSTM_FE_SECOND_AVAILABLE
     
     if lstm_fe_available:
         print("\n--- LSTM with Feature Engineering ---")
@@ -1134,20 +1134,20 @@ def main():
     print("LOADING DATA")
     print("="*80)
     
-    first_sample_path = os.path.join(SCRIPT_DIR, 'first_sample', 'rawdata_1990_2022.csv')
-    second_sample_path = os.path.join(SCRIPT_DIR, 'second_sample', 'rawdata_1990_2022.csv')
+    without_dummy_path = os.path.join(SCRIPT_DIR, 'without_dummy', 'rawdata_1990_2022.csv')
+    with_dummy_path = os.path.join(SCRIPT_DIR, 'with_dummy', 'rawdata_1990_2022.csv')
     
-    Y_first = load_csv(first_sample_path)
-    Y_second = load_csv(second_sample_path)
+    Y_first = load_csv(without_dummy_path)
+    Y_second = load_csv(with_dummy_path)
     
     print(f"\nFirst Sample:")
-    print(f"  Path: {first_sample_path}")
+    print(f"  Path: {without_dummy_path}")
     print(f"  Shape: {Y_first.shape}")
     print(f"  Periods: {Y_first.shape[0]} months")
     print(f"  Variables: {Y_first.shape[1]}")
     
     print(f"\nSecond Sample:")
-    print(f"  Path: {second_sample_path}")
+    print(f"  Path: {with_dummy_path}")
     print(f"  Shape: {Y_second.shape}")
     print(f"  Periods: {Y_second.shape[0]} months")
     print(f"  Variables: {Y_second.shape[1]}")
@@ -1178,8 +1178,8 @@ def main():
     results_dir = os.path.join(SCRIPT_DIR, 'comparison_results')
     os.makedirs(results_dir, exist_ok=True)
     
-    df_first.to_csv(os.path.join(results_dir, 'first_sample_results.csv'), index=False)
-    df_second.to_csv(os.path.join(results_dir, 'second_sample_results.csv'), index=False)
+    df_first.to_csv(os.path.join(results_dir, 'without_dummy_results.csv'), index=False)
+    df_second.to_csv(os.path.join(results_dir, 'with_dummy_results.csv'), index=False)
     print(f"\n✓ Results saved to {results_dir}/")
     
     # ==========================================================================
@@ -1196,12 +1196,12 @@ def main():
     
     generate_detailed_plot(
         df_first, "First Sample",
-        os.path.join(results_dir, 'first_sample_all_models.png')
+        os.path.join(results_dir, 'without_dummy_all_models.png')
     )
     
     generate_detailed_plot(
         df_second, "Second Sample",
-        os.path.join(results_dir, 'second_sample_all_models.png')
+        os.path.join(results_dir, 'with_dummy_all_models.png')
     )
     
     # ==========================================================================
@@ -1211,12 +1211,12 @@ def main():
     
     generate_forecast_plot(
         forecast_first, df_first, "First Sample",
-        os.path.join(results_dir, 'first_sample_forecast_vs_actual.png')
+        os.path.join(results_dir, 'without_dummy_forecast_vs_actual.png')
     )
     
     generate_forecast_plot(
         forecast_second, df_second, "Second Sample",
-        os.path.join(results_dir, 'second_sample_forecast_vs_actual.png')
+        os.path.join(results_dir, 'with_dummy_forecast_vs_actual.png')
     )
     
     generate_combined_forecast_comparison(
@@ -1255,13 +1255,13 @@ def main():
     print(f"\n⏱️  Total execution time: {total_time/60:.1f} minutes ({total_time:.1f} seconds)")
     
     print(f"\n📁 Output files:")
-    print(f"   - {results_dir}/first_sample_results.csv")
-    print(f"   - {results_dir}/second_sample_results.csv")
+    print(f"   - {results_dir}/without_dummy_results.csv")
+    print(f"   - {results_dir}/with_dummy_results.csv")
     print(f"   - {results_dir}/top10_comparison.png")
-    print(f"   - {results_dir}/first_sample_all_models.png")
-    print(f"   - {results_dir}/second_sample_all_models.png")
-    print(f"   - {results_dir}/first_sample_forecast_vs_actual.png")
-    print(f"   - {results_dir}/second_sample_forecast_vs_actual.png")
+    print(f"   - {results_dir}/without_dummy_all_models.png")
+    print(f"   - {results_dir}/with_dummy_all_models.png")
+    print(f"   - {results_dir}/without_dummy_forecast_vs_actual.png")
+    print(f"   - {results_dir}/with_dummy_forecast_vs_actual.png")
     print(f"   - {results_dir}/combined_forecast_comparison.png")
     
     print("\n" + "="*80)

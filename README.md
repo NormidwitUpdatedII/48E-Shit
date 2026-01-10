@@ -7,39 +7,39 @@ A comprehensive Python implementation for inflation forecasting using machine le
 - **21+ Forecasting Methods**: Random Forest, XGBoost, LSTM, LASSO, Ridge, and more
 - **Dynamic Period Selection**: Each model can run on different sample periods
 - **RMSE by Horizon (h1-h12)**: All models output RMSE for each forecast horizon
-- **Outlier Handling**: second_sample includes 2008 crisis dummy variable
+- **Outlier Handling**: `with_dummy` sample includes 2008 crisis dummy variable
 - **Rolling Window Evaluation**: Expanding window forecasts with comprehensive error metrics
 
 ## Project Structure
 
 ```
 48E-Project-Files/
-├── requirements.txt          # Python dependencies
-├── utils.py                  # Shared utility functions
-├── fred_md_loader.py         # FRED-MD data loader
-├── first_sample/             # Periods WITHOUT 2008 crisis
-│   ├── rawdata_1990_2000.csv # Great Moderation period
-│   ├── rawdata_2016_2022.csv # COVID/inflation period (default)
-│   ├── rawdata_2020_2022.csv # Pandemic subset
-│   ├── functions/            # Model implementations
-│   └── run/                  # Execution scripts (dynamic nprev)
-└── second_sample/            # Periods WITH 2008 crisis
-    ├── rawdata_2001_2015.csv # Financial crisis period
-    ├── rawdata_1990_2022.csv # Full sample (default)
-    ├── functions/            # Model implementations
-    └── run/                  # Execution scripts (with outlier dummy)
+├── requirements.txt           # Python dependencies
+├── utils.py                   # Shared utility functions
+├── fred_md_loader.py          # FRED-MD data loader
+├── without_dummy/             # Periods WITHOUT 2008 crisis (no outlier dummy)
+│   ├── rawdata_1990_2000.csv  # Great Moderation period
+│   ├── rawdata_2016_2022.csv  # COVID/inflation period (default)
+│   ├── rawdata_2020_2022.csv  # Pandemic subset
+│   ├── functions/             # Model implementations
+│   └── run/                   # Execution scripts
+└── with_dummy/                # Periods WITH 2008 crisis (with outlier dummy)
+    ├── rawdata_2001_2015.csv  # Financial crisis period
+    ├── rawdata_1990_2022.csv  # Full sample (default)
+    ├── functions/             # Model implementations
+    └── run/                   # Execution scripts
 ```
 
 ## Sample Periods
 
-### first_sample (No 2008 Crisis, No Outlier Dummy)
+### without_dummy (No 2008 Crisis, No Outlier Dummy)
 | Period | Observations | nprev | Description |
 |--------|--------------|-------|-------------|
 | 1990_2000 | 132 | 60 | Great Moderation |
 | **2016_2022** | 84 | 48 | COVID/inflation (**default**) |
 | 2020_2022 | 36 | 24 | Pandemic subset |
 
-### second_sample (Has 2008 Crisis, With Outlier Dummy)
+### with_dummy (Has 2008 Crisis, With Outlier Dummy)
 | Period | Observations | nprev | Description |
 |--------|--------------|-------|-------------|
 | 2001_2015 | 180 | 84 | Financial crisis & recovery |
@@ -47,10 +47,9 @@ A comprehensive Python implementation for inflation forecasting using machine le
 
 ## Changing the Period
 
-To run a different period, edit the `CURRENT_PERIOD` variable in any run file:
+Edit `CURRENT_PERIOD` in any run file:
 
 ```python
-# In first_sample/run/rf.py
 PERIOD_CONFIG = {
     '1990_2000': {'nprev': 60},
     '2016_2022': {'nprev': 48},
@@ -68,11 +67,11 @@ pip install -r requirements.txt
 ## Usage
 
 ```bash
-# Run Random Forest (first_sample - 2016-2022, no outlier dummy)
-python first_sample/run/rf.py
+# Run Random Forest (without_dummy - 2016-2022, no outlier dummy)
+python without_dummy/run/rf.py
 
-# Run Random Forest (second_sample - 1990-2022, with outlier dummy)
-python second_sample/run/rf.py
+# Run Random Forest (with_dummy - 1990-2022, with outlier dummy)
+python with_dummy/run/rf.py
 ```
 
 ### Output Format

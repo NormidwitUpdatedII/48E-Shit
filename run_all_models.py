@@ -11,7 +11,7 @@ Usage:
     python run_all_models.py                    # Run all models, all periods
     python run_all_models.py --period 1990_2000 # Run specific period
     python run_all_models.py --model rf_fe      # Run specific model
-    python run_all_models.py --sample first     # Run only first_sample
+    python run_all_models.py --sample first     # Run only without_dummy
 
 Sample Periods:
     1990_2000: Low volatility (Great Moderation)
@@ -44,7 +44,7 @@ from utils import load_csv, save_forecasts, embed, calculate_errors
 SAMPLE_PERIODS = ['1990_2000', '2001_2015', '2016_2022', '2020_2022', '1990_2022']
 
 # Sample directories
-SAMPLE_DIRS = ['first_sample', 'second_sample']
+SAMPLE_DIRS = ['without_dummy', 'with_dummy']
 
 # nprev values for each sample period (forecast evaluation months)
 NPREV_CONFIG = {
@@ -52,10 +52,10 @@ NPREV_CONFIG = {
     '2001_2015': 84,   # 7 years
     '2016_2022': 48,   # 4 years
     '2020_2022': 24,   # 2 years
-    '1990_2022': 132,  # 11 years (same as original first_sample)
+    '1990_2022': 132,  # 11 years (same as original without_dummy)
     'original': {
-        'first_sample': 132,
-        'second_sample': 298
+        'without_dummy': 132,
+        'with_dummy': 298
     }
 }
 
@@ -129,7 +129,7 @@ def run_model(model_name, sample_dir, period=None, horizons=range(1, 13)):
     model_name : str
         Name of the model to run
     sample_dir : str
-        'first_sample' or 'second_sample'
+        'without_dummy' or 'with_dummy'
     period : str, optional
         Sample period (e.g., '1990_2000')
     horizons : list
@@ -159,35 +159,35 @@ def run_model(model_name, sample_dir, period=None, horizons=range(1, 13)):
     
     try:
         if model_name == 'rw':
-            from first_sample.functions.func_rw import rw_rolling_window
+            from without_dummy.functions.func_rw import rw_rolling_window
             for lag in horizons:
                 results[f'rw{lag}c'] = rw_rolling_window(Y, nprev, indice=1, lag=lag)
                 results[f'rw{lag}p'] = rw_rolling_window(Y, nprev, indice=2, lag=lag)
                 
         elif model_name == 'ar':
-            if sample_dir == 'first_sample':
-                from first_sample.functions.func_ar import ar_rolling_window
+            if sample_dir == 'without_dummy':
+                from without_dummy.functions.func_ar import ar_rolling_window
             else:
-                from second_sample.functions.func_ar import ar_rolling_window
+                from with_dummy.functions.func_ar import ar_rolling_window
             for lag in horizons:
                 results[f'ar{lag}c'] = ar_rolling_window(Y, nprev, indice=1, lag=lag)
                 results[f'ar{lag}p'] = ar_rolling_window(Y, nprev, indice=2, lag=lag)
                 
         elif model_name == 'rf':
-            if sample_dir == 'first_sample':
-                from first_sample.functions.func_rf import rf_rolling_window
+            if sample_dir == 'without_dummy':
+                from without_dummy.functions.func_rf import rf_rolling_window
             else:
-                from second_sample.functions.func_rf import rf_rolling_window
+                from with_dummy.functions.func_rf import rf_rolling_window
             for lag in horizons:
                 results[f'rf{lag}c'] = rf_rolling_window(Y, nprev, indice=1, lag=lag)
                 results[f'rf{lag}p'] = rf_rolling_window(Y, nprev, indice=2, lag=lag)
                 
         elif model_name == 'rf_fe':
             # Run feature-engineered Random Forest
-            if sample_dir == 'first_sample':
-                from first_sample.run.rf_fe import run_rf_fe
+            if sample_dir == 'without_dummy':
+                from without_dummy.run.rf_fe import run_rf_fe
             else:
-                from second_sample.run.rf_fe import run_rf_fe
+                from with_dummy.run.rf_fe import run_rf_fe
             for lag in horizons:
                 result = run_rf_fe(Y, nprev, indice=1, lag=lag)
                 results[f'rf_fe{lag}c'] = result
@@ -195,10 +195,10 @@ def run_model(model_name, sample_dir, period=None, horizons=range(1, 13)):
                 results[f'rf_fe{lag}p'] = result
                 
         elif model_name == 'xgb_fe':
-            if sample_dir == 'first_sample':
-                from first_sample.run.xgb_fe import run_xgb_fe
+            if sample_dir == 'without_dummy':
+                from without_dummy.run.xgb_fe import run_xgb_fe
             else:
-                from second_sample.run.xgb_fe import run_xgb_fe
+                from with_dummy.run.xgb_fe import run_xgb_fe
             for lag in horizons:
                 result = run_xgb_fe(Y, nprev, indice=1, lag=lag)
                 results[f'xgb_fe{lag}c'] = result
@@ -206,10 +206,10 @@ def run_model(model_name, sample_dir, period=None, horizons=range(1, 13)):
                 results[f'xgb_fe{lag}p'] = result
                 
         elif model_name == 'lstm_fe':
-            if sample_dir == 'first_sample':
-                from first_sample.run.lstm_fe import run_lstm_fe
+            if sample_dir == 'without_dummy':
+                from without_dummy.run.lstm_fe import run_lstm_fe
             else:
-                from second_sample.run.lstm_fe import run_lstm_fe
+                from with_dummy.run.lstm_fe import run_lstm_fe
             for lag in horizons:
                 result = run_lstm_fe(Y, nprev, indice=1, lag=lag)
                 results[f'lstm_fe{lag}c'] = result
@@ -353,9 +353,9 @@ def main():
     periods = [args.period] if args.period else None
     
     if args.sample == 'first':
-        samples = ['first_sample']
+        samples = ['without_dummy']
     elif args.sample == 'second':
-        samples = ['second_sample']
+        samples = ['with_dummy']
     else:
         samples = SAMPLE_DIRS
     
