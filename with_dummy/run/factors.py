@@ -55,8 +55,7 @@ def main():
     
     print(f"Done! Forecasts saved to {FORECAST_DIR}")
     # Print RMSE by horizon
-    print("
-RMSE BY HORIZON:")
+    print("\nRMSE BY HORIZON:")
     print(f"{'Horizon':<8} {'CPI':<12} {'PCE':<12}")
     for h in range(1, 13):
         print(f"h={h:<6} {rmse_cpi.get(h, 0):<12.6f} {rmse_pce.get(h, 0):<12.6f}")
