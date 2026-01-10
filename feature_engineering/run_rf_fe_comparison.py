@@ -80,7 +80,7 @@ def run_rf_fe_for_period(period, sample_dir, rf_fe_func):
     data_path = os.path.join(PROJECT_ROOT, sample_dir, f'rawdata_{period}.csv')
     
     if not os.path.exists(data_path):
-        print(f"  ⚠ Data file not found: {data_path}")
+        print(f"  [!] Data file not found: {data_path}")
         return None
     
     Y = load_csv(data_path)
@@ -89,7 +89,7 @@ def run_rf_fe_for_period(period, sample_dir, rf_fe_func):
     # Adjust nprev if dataset is too small
     if len(Y) < nprev + 24:  # Need at least 24 months for training
         nprev = max(len(Y) // 3, 12)
-        print(f"  ⚠ Adjusted nprev to {nprev} (dataset too small)")
+        print(f"  [!] Adjusted nprev to {nprev} (dataset too small)")
     
     results = {}
     lag = 12  # 12-month forecast horizon
@@ -198,9 +198,9 @@ def run_all_periods(periods=None):
     
     results_path = os.path.join(output_dir, 'rf_fe_all_periods_summary.csv')
     results_df.to_csv(results_path, index=False)
-    print(f"\n✓ Results saved to: {results_path}")
+    print(f"\n[OK] Results saved to: {results_path}")
     
-    print(f"\n⏱️  Total execution time: {total_time/60:.1f} minutes")
+    print(f"\nTotal execution time: {total_time/60:.1f} minutes")
     print("\n" + "=" * 70)
     print("RF-FE COMPARISON COMPLETE!")
     print("=" * 70)
