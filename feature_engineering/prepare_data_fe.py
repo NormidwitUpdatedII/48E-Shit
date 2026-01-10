@@ -29,7 +29,7 @@ sys.path.insert(0, str(project_root))
 import numpy as np
 import pandas as pd
 from fred_md_loader import FREDMDLoader, load_fred_md, create_aligned_dataset
-from feature_engineering import StationaryFeatureEngineer, engineer_features_for_model
+from feature_engineering.feature_engineering import StationaryFeatureEngineer, engineer_features_for_model
 
 
 # Sample configurations matching R project

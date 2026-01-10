@@ -34,7 +34,7 @@ import pandas as pd
 import warnings
 warnings.filterwarnings('ignore')
 
-from feature_config import (
+from .feature_config import (
     ROLLING_WINDOWS, MOMENTUM_HORIZONS, VOLATILITY_WINDOWS,
     ZSCORE_WINDOW, OUTLIER_THRESHOLD, N_PCA_COMPONENTS
 )
