@@ -26,8 +26,9 @@ from datetime import datetime
 warnings.filterwarnings('ignore')
 
 # Setup paths
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, SCRIPT_DIR)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # feature_engineering folder
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)  # project root
+sys.path.insert(0, PROJECT_ROOT)
 
 from utils import load_csv, calculate_errors
 
@@ -187,8 +188,8 @@ def main():
     print("LOADING DATA")
     print("="*60)
     
-    first_sample_path = os.path.join(SCRIPT_DIR, 'first_sample', 'rawdata.csv')
-    second_sample_path = os.path.join(SCRIPT_DIR, 'second_sample', 'rawdata.csv')
+    first_sample_path = os.path.join(PROJECT_ROOT, 'first_sample', 'rawdata.csv')
+    second_sample_path = os.path.join(PROJECT_ROOT, 'second_sample', 'rawdata.csv')
     
     Y_first = load_csv(first_sample_path)
     Y_second = load_csv(second_sample_path)
@@ -253,7 +254,7 @@ def main():
     # ==========================================================================
     # Save Results
     # ==========================================================================
-    output_dir = os.path.join(SCRIPT_DIR, 'rf_fe_results')
+    output_dir = os.path.join(PROJECT_ROOT, 'rf_fe_results')
     save_results(first_results, second_results, output_dir)
     
     print(f"\n⏱️  Total execution time: {total_time/60:.1f} minutes ({total_time:.1f} seconds)")

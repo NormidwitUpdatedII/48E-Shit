@@ -28,12 +28,15 @@ warnings.filterwarnings('ignore')
 
 # Handle both script and notebook environments
 try:
-    SCRIPT_DIR = Path(__file__).parent
+    SCRIPT_DIR = Path(__file__).parent  # feature_engineering folder
+    PROJECT_ROOT = SCRIPT_DIR.parent    # project root
 except NameError:
     # Running in Kaggle/Jupyter notebook
     SCRIPT_DIR = Path.cwd()
+    PROJECT_ROOT = SCRIPT_DIR
 
-sys.path.insert(0, str(SCRIPT_DIR))
+# Add project root to path for imports
+sys.path.insert(0, str(PROJECT_ROOT))
 
 CPI_COLUMN = 'CPIAUCSL'
 PCE_COLUMN = 'PCEPI'
@@ -49,9 +52,9 @@ RF_PARAMS = {
 # Import project modules
 try:
     from utils import embed, calculate_errors
-    from feature_engineering.feature_engineering import StationaryFeatureEngineer
-    from feature_engineering.feature_utils import handle_missing_values, apply_3stage_feature_selection
-    from feature_engineering.feature_config import (
+    from .feature_engineering import StationaryFeatureEngineer
+    from .feature_utils import handle_missing_values, apply_3stage_feature_selection
+    from .feature_config import (
         CONSTANT_VARIANCE_THRESHOLD,
         CORRELATION_THRESHOLD,
         LOW_VARIANCE_THRESHOLD
@@ -369,7 +372,7 @@ def main():
     print("=" * 70)
     
     # Load data
-    data_path = SCRIPT_DIR / 'data' / '2025-11-MD.csv'
+    data_path = PROJECT_ROOT / 'data' / '2025-11-MD.csv'
     
     if not data_path.exists():
         print(f"\n❌ ERROR: Data file not found: {data_path}")
@@ -472,7 +475,7 @@ def main():
     print("\n" + results_df.to_string(index=False))
     
     # Save results
-    output_dir = SCRIPT_DIR / 'results' / 'hybrid_rf_fe'
+    output_dir = PROJECT_ROOT / 'results' / 'hybrid_rf_fe'
     output_dir.mkdir(parents=True, exist_ok=True)
     
     results_path = output_dir / 'hybrid_results.csv'
