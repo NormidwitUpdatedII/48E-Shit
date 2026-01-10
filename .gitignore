@@ -34,3 +34,10 @@ Thumbs.db
 *.log
 results/
 output/
+
+# Large feature-engineered files (exceed GitHub's 100MB limit)
+# These can be regenerated with: python generate_all_samples.py
+first_sample/rawdata_fe.csv
+second_sample/rawdata_fe.csv
+first_sample/rawdata_fe_*.csv
+second_sample/rawdata_fe_*.csv

@@ -40,9 +40,9 @@ from .feature_utils import (
     standardize_features,
     handle_missing_values,
     apply_3stage_feature_selection,
-    remove_constant_features,
-    remove_high_correlation_features,
-    remove_low_variance_features
+    remove_highly_correlated,
+    select_features_by_variance,
+    select_features_by_correlation
 )
 
 __all__ = [
@@ -60,9 +60,9 @@ __all__ = [
     'standardize_features',
     'handle_missing_values',
     'apply_3stage_feature_selection',
-    'remove_constant_features',
-    'remove_high_correlation_features',
-    'remove_low_variance_features',
+    'remove_highly_correlated',
+    'select_features_by_variance',
+    'select_features_by_correlation',
     
     # Config
     'ROLLING_WINDOWS',
