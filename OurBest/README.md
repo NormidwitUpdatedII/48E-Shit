@@ -6,25 +6,30 @@ This project develops machine learning models to forecast U.S. headline CPI infl
 
 ## Key Results
 
-### Horizon 1 (1-Month Ahead) - Clean Ensemble
+### Multi-Horizon Performance Summary (RMSE Ratio = Model / Random Walk)
 
-| Period | Ratio | Improvement | Description |
-|--------|-------|-------------|-------------|
-| **1990-2022** | 0.8381 | 16.2% | Full sample |
-| **1990-2000** | 0.7778 | 22.2% | Low-volatility |
-| 2001-2015 | 0.8546 | 14.5% | 2008 Crisis |
-| **2016-2022** | 0.8315 | 16.8% | COVID period |
-| 2020-2022 | 0.8634 | 13.7% | Pandemic |
+| Period | H=1 | H=4 | H=6 | H=12 | **Best** |
+|--------|-----|-----|-----|------|----------|
+| **1990-2000** | 0.7778 | 0.7578 | 0.8185 | **0.7218** | H=12 |
+| 2001-2015 | 0.8546 | 0.8216 | **0.7860** | 0.8273 | H=6 |
+| **2016-2022** | 0.8315 | 0.8091 | 0.8651 | **0.7507** | H=12 |
+| **2020-2022** | 0.8634 | 0.8164 | 0.8425 | **0.7536** | H=12 |
+| **1990-2022** | 0.8381 | 0.8125 | 0.8045 | **0.7945** | H=12 |
 
-### Horizon 4 (4-Month Ahead) - Enhanced Ensemble
+### Improvement vs Random Walk (%)
 
-| Period | Ratio | Improvement | Description |
-|--------|-------|-------------|-------------|
-| **1990-2022** | 0.8125 | 18.7% | Full sample |
-| **1990-2000** | 0.7578 | 24.2% | Low-volatility |
-| 2001-2015 | 0.8216 | 17.8% | 2008 Crisis |
-| **2016-2022** | 0.8091 | 19.1% | COVID period |
-| 2020-2022 | 0.8164 | 18.4% | Pandemic |
+| Period | H=1 | H=4 | H=6 | H=12 |
+|--------|-----|-----|-----|------|
+| 1990-2000 | 22.2% | 24.2% | 18.1% | **27.8%** |
+| 2001-2015 | 14.5% | 17.8% | **21.4%** | 17.3% |
+| 2016-2022 | 16.8% | 19.1% | 13.5% | **24.9%** |
+| 2020-2022 | 13.7% | 18.4% | 15.7% | **24.6%** |
+| 1990-2022 | 16.2% | 18.7% | 19.6% | **20.5%** |
+
+**Key Findings:**
+- **H=12 achieves best performance** in 4 out of 5 periods
+- **Pandemic period (2020-2022):** H=12 shows 24.6% improvement over RW
+- **Low-volatility era (1990-2000):** H=12 achieves 27.8% improvement
 
 ---
 
