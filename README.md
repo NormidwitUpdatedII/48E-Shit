@@ -17,17 +17,20 @@ This repository implements state-of-the-art machine learning methods for inflati
 ## 📁 Project Structure
 
 ```
-Naghiayik-python/
+48E-Project-Files/
 ├── requirements.txt          # Python dependencies
 ├── utils.py                  # Shared utility functions
 ├── fred_md_loader.py         # FRED-MD data loader with transformations
-├── feature_engineering.py    # Advanced feature engineering module
-├── feature_config.py         # Feature engineering configuration
-├── feature_utils.py          # Feature engineering utilities
-├── prepare_data_fe.py        # Prepare feature-engineered datasets
-├── first_sample/             # First sample period analysis (~2000-2025)
-│   ├── __init__.py
-│   ├── rawdata.csv           # Pre-processed FRED-MD data (502 rows)
+├── run_rf_fe_hybrid.py       # Optimized hybrid RF-FE model (MAIN MODEL)
+├── run_rf_fe_comparison.py   # Performance comparison script
+├── comprehensive_comparison.py # Comprehensive model comparison
+├── feature_engineering/      # Feature engineering module
+│   ├── feature_engineering.py # Core FE transformations
+│   ├── feature_config.py     # FE configuration parameters
+│   ├── feature_utils.py      # FE utility functions
+│   └── prepare_data_fe.py    # Data preparation for FE models
+├── first_sample/             # First sample period analysis (2000-2025, 502 obs)
+│   ├── rawdata.csv           # Pre-processed FRED-MD data
 │   ├── rawdata_fe.csv        # Feature-engineered data (502×5061)
 │   ├── functions/            # Model function implementations
 │   │   ├── func_rw.py        # Random Walk (benchmark)
@@ -35,66 +38,20 @@ Naghiayik-python/
 │   │   ├── func_lasso.py     # LASSO regression
 │   │   ├── func_rf.py        # Random Forest
 │   │   ├── func_xgb.py       # XGBoost
-│   │   ├── func_nn.py        # Neural Networks
 │   │   ├── func_lstm.py      # LSTM Deep Learning
-│   │   ├── func_boosting.py  # Gradient Boosting
-│   │   ├── func_bag.py       # Bagging
-│   │   ├── func_csr.py       # Complete Subset Regression
-│   │   ├── func_fact.py      # Factor Models
-│   │   ├── func_tfact.py     # Targeted Factor Models
-│   │   ├── func_scad.py      # SCAD Penalized Regression
-│   │   ├── func_jn.py        # Jackknife
-│   │   ├── func_rfols.py     # Random Forest OLS
-│   │   ├── func_lbvar.py     # Large Bayesian VAR
-│   │   ├── func_ucsv.py      # Unobserved Components SV
-│   │   ├── func_polilasso.py # Polynomial LASSO
-│   │   ├── func_adalassorf.py # Adaptive LASSO RF
-│   │   ├── func_rffact.py    # Random Forest Factor
-│   │   └── __init__.py
+│   │   └── ... (21+ models total)
 │   └── run/                  # Execution scripts
-│       ├── rw.py             # Run Random Walk (benchmark)
+│       ├── rw.py             # Run Random Walk
 │       ├── ar.py             # Run AR models
-│       ├── lasso.py          # Run LASSO
-│       ├── adalasso.py       # Run Adaptive LASSO
-│       ├── elasticnet.py     # Run Elastic Net
-│       ├── ridge.py          # Run Ridge Regression
-│       ├── rf.py             # Run Random Forest
 │       ├── rf_fe.py          # Run RF with Feature Engineering
-│       ├── xgb.py            # Run XGBoost
 │       ├── xgb_fe.py         # Run XGBoost with Feature Engineering
-│       ├── nn.py             # Run Neural Networks
-│       ├── lstm.py           # Run LSTM
 │       ├── lstm_fe.py        # Run LSTM with Feature Engineering
-│       ├── boosting.py       # Run Boosting
-│       ├── bagging.py        # Run Bagging
-│       ├── csr.py            # Run CSR
-│       ├── factors.py        # Run Factor Models
-│       ├── tfactors.py       # Run Targeted Factors
-│       ├── scad.py           # Run SCAD
-│       ├── jackknife.py      # Run Jackknife
-│       ├── rfols.py          # Run RF-OLS
-│       ├── lbvar.py          # Run LBVAR
-│       ├── ucsv.py           # Run UC-SV
-│       └── __init__.py
-└── second_sample/            # Second sample period analysis (~1959-2025)
-    ├── __init__.py
-    ├── rawdata.csv           # Pre-processed FRED-MD data (800 rows)
+│       └── ... (all model runners)
+└── second_sample/            # Second sample period analysis (1959-2025, 800 obs)
+    ├── rawdata.csv           # Pre-processed FRED-MD data
     ├── rawdata_fe.csv        # Feature-engineered data (800×5061)
     ├── functions/            # Same structure as first_sample
-    │   ├── func_flasso.py    # Forecast LASSO (unique)
-    │   ├── func_rflasso.py   # RF LASSO (unique)
-    │   ├── func_lstm.py      # LSTM Deep Learning
-    │   └── ... (same as first_sample)
-    └── run/
-        ├── cm.py             # Combination Methods (unique)
-        ├── fadalasso.py      # Forecast Adaptive LASSO
-        ├── rflasso.py        # RF LASSO
-        ├── rlasso.py         # Robust LASSO
-        ├── lstm.py           # Run LSTM
-        ├── lstm_fe.py        # Run LSTM with Feature Engineering
-        ├── rf_fe.py          # Run RF with Feature Engineering
-        ├── xgb_fe.py         # Run XGBoost with Feature Engineering
-        └── ... (same as first_sample)
+    └── run/                  # Same structure as first_sample
 ```
 
 ## 🔧 Installation
