@@ -8,7 +8,17 @@ import numpy as np
 
 # Set up absolute paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata_1990_2022.csv')
+
+# Period configuration - first_sample
+# Valid periods: 1990_2000, 2016_2022, 2020_2022
+PERIOD_CONFIG = {
+    '1990_2000': {'nprev': 60},
+    '2016_2022': {'nprev': 48},
+    '2020_2022': {'nprev': 24},
+}
+CURRENT_PERIOD = '2016_2022'  # Change this to run different period
+
+DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), f'rawdata_{CURRENT_PERIOD}.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 # Add parent directories to path for imports
@@ -19,7 +29,7 @@ from utils import load_csv, save_forecasts
 from functions.func_rw import rw_rolling_window
 
 # Parameters
-nprev = 132  # Out-of-sample forecasts for first sample
+nprev = PERIOD_CONFIG[CURRENT_PERIOD]['nprev']  # Out-of-sample forecasts for first sample
 
 # Load data
 data = load_csv(DATA_PATH)

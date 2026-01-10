@@ -12,7 +12,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 # Path constants for absolute paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata_1990_2022.csv')
+
+# Period configuration - second_sample
+# Valid periods: 2001_2015, 1990_2022
+PERIOD_CONFIG = {
+    '2001_2015': {'nprev': 84},
+    '1990_2022': {'nprev': 132},
+}
+CURRENT_PERIOD = '1990_2022'  # Change this to run different period
+
+DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), f'rawdata_{CURRENT_PERIOD}.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 from second_sample.functions.func_adalassorf import lasso_rolling_window
@@ -25,7 +34,7 @@ def main():
     # Add dummy variable for outliers (COVID period) as in the R code
     Y = add_outlier_dummy(Y, target_col=0)
     
-    nprev = 298  # Out-of-sample 2001-2025
+    nprev = PERIOD_CONFIG[CURRENT_PERIOD]['nprev']  # Out-of-sample 2001-2025
     
     print("Running AdaLASSO+RF forecasts (second sample with dummy)...")
     

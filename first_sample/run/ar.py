@@ -15,7 +15,17 @@ from first_sample.functions.func_ar import ar_rolling_window
 
 # Get the directory where this script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(SCRIPT_DIR, '..', 'rawdata_1990_2022.csv')
+
+# Period configuration - first_sample
+# Valid periods: 1990_2000, 2016_2022, 2020_2022
+PERIOD_CONFIG = {
+    '1990_2000': {'nprev': 60},
+    '2016_2022': {'nprev': 48},
+    '2020_2022': {'nprev': 24},
+}
+CURRENT_PERIOD = '2016_2022'  # Change this to run different period
+
+DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), f'rawdata_{CURRENT_PERIOD}.csv')
 FORECAST_DIR = os.path.join(SCRIPT_DIR, '..', 'forecasts')
 
 
@@ -23,7 +33,7 @@ def main():
     # Load data
     Y = load_csv(DATA_PATH)
     
-    nprev = 132
+    nprev = PERIOD_CONFIG[CURRENT_PERIOD]['nprev']
     
     results = {}
     rmse_fixed_cpi = {}

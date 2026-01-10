@@ -16,7 +16,17 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 # Path constants for absolute paths
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), 'rawdata_1990_2022.csv')
+
+# Period configuration - first_sample
+# Valid periods: 1990_2000, 2016_2022, 2020_2022
+PERIOD_CONFIG = {
+    '1990_2000': {'nprev': 60},
+    '2016_2022': {'nprev': 48},
+    '2020_2022': {'nprev': 24},
+}
+CURRENT_PERIOD = '2016_2022'  # Change this to run different period
+
+DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), f'rawdata_{CURRENT_PERIOD}.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
 from first_sample.functions.func_rffact import rffact_rolling_window
@@ -30,7 +40,7 @@ else:
     np.random.seed(42)
     Y = np.random.randn(300, 10)
 
-nprev = 132
+nprev = PERIOD_CONFIG[CURRENT_PERIOD]['nprev']
 
 
 def load_rf_importance(filepath):
