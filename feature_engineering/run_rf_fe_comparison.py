@@ -1,23 +1,26 @@
 """
-RF-FE Model Comparison Script
-==============================
-Runs Random Forest with Feature Engineering on both first_sample and second_sample
-with 12-month forecast horizon and computes out-of-sample RMSE.
+RF-FE Model Comparison Script - ALL SAMPLE PERIODS
+====================================================
+Runs Random Forest with Feature Engineering on ALL 5 sample periods
+for both first_sample and second_sample directories.
 
-Features:
-- Parallelized rolling window estimation using joblib
-- 12-month forecast horizon (lag=12)
-- Out-of-sample RMSE computation
-- Results for both CPI (indice=1) and PCE (indice=2)
+Sample Periods:
+- 1990_2000: Low volatility (Great Moderation)
+- 2001_2015: Financial crisis and recovery
+- 2016_2022: COVID-19 and inflation surge
+- 2020_2022: Pandemic subset
+- 1990_2022: Full extended sample
 
-Author: Naghiayik Project
-Date: January 2026
+Usage:
+    python run_rf_fe_comparison.py           # Run all periods
+    python run_rf_fe_comparison.py 1990_2000 # Run specific period
 """
 
 import os
 import sys
 import time
 import warnings
+import argparse
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -36,235 +39,203 @@ from utils import load_csv, calculate_errors
 from first_sample.run.rf_fe import rf_fe_rolling_window as rf_fe_first
 from second_sample.run.rf_fe import rf_fe_rolling_window as rf_fe_second
 
+# Available periods with their nprev values
+SAMPLE_PERIODS = {
+    '1990_2000': {'nprev': 60, 'description': 'Low volatility (Great Moderation)'},
+    '2001_2015': {'nprev': 84, 'description': 'Financial crisis and recovery'},
+    '2016_2022': {'nprev': 48, 'description': 'COVID-19 and inflation surge'},
+    '2020_2022': {'nprev': 24, 'description': 'Pandemic subset'},
+    '1990_2022': {'nprev': 132, 'description': 'Full extended sample'},
+}
 
-def print_header():
+
+def print_header(periods):
     """Print script header."""
     print("=" * 70)
-    print("RF-FE (Random Forest with Feature Engineering) MODEL COMPARISON")
+    print("RF-FE (Random Forest + Feature Engineering) - ALL PERIODS")
     print("=" * 70)
     print(f"Run Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Forecast Horizon: 12 months")
+    print(f"Periods to run: {', '.join(periods)}")
     print("=" * 70)
 
 
-def run_rf_fe_for_sample(Y, nprev, sample_name, rf_fe_func):
+def run_rf_fe_for_period(period, sample_dir, rf_fe_func):
     """
-    Run RF-FE model for a single sample.
+    Run RF-FE model for a specific period and sample.
     
     Parameters:
     -----------
-    Y : np.ndarray
-        Data matrix
-    nprev : int
-        Number of out-of-sample predictions
-    sample_name : str
-        Name of sample for display
+    period : str
+        Period name (e.g., '1990_2000')
+    sample_dir : str
+        'first_sample' or 'second_sample'
     rf_fe_func : callable
-        RF-FE rolling window function for the sample
+        RF-FE rolling window function
         
     Returns:
     --------
-    dict : Results containing predictions, actuals, and errors
+    dict : Results with predictions, actuals, and errors
     """
+    # Construct data path
+    data_path = os.path.join(PROJECT_ROOT, sample_dir, f'rawdata_{period}.csv')
+    
+    if not os.path.exists(data_path):
+        print(f"  ⚠ Data file not found: {data_path}")
+        return None
+    
+    Y = load_csv(data_path)
+    nprev = SAMPLE_PERIODS[period]['nprev']
+    
+    # Adjust nprev if dataset is too small
+    if len(Y) < nprev + 24:  # Need at least 24 months for training
+        nprev = max(len(Y) // 3, 12)
+        print(f"  ⚠ Adjusted nprev to {nprev} (dataset too small)")
+    
     results = {}
     lag = 12  # 12-month forecast horizon
     
-    print(f"\n{'='*60}")
-    print(f"Running RF-FE for {sample_name}")
-    print(f"{'='*60}")
-    print(f"Data shape: {Y.shape}")
-    print(f"Out-of-sample periods: {nprev}")
-    print(f"Forecast horizon: {lag} months")
+    print(f"\n  {sample_dir} | {period}")
+    print(f"  Data shape: {Y.shape}, nprev: {nprev}")
     
     # CPI (indice=1)
-    print(f"\n--- CPI Forecasting (indice=1) ---")
-    start_time = time.time()
-    cpi_result = rf_fe_func(Y, nprev, indice=1, lag=lag)
-    cpi_time = time.time() - start_time
-    
-    print(f"  Completed in {cpi_time:.1f} seconds")
-    print(f"  RMSE: {cpi_result['errors']['rmse']:.6f}")
-    print(f"  MAE:  {cpi_result['errors']['mae']:.6f}")
-    
-    results['CPI'] = {
-        'pred': cpi_result['pred'],
-        'actual': cpi_result['actuals'],
-        'rmse': cpi_result['errors']['rmse'],
-        'mae': cpi_result['errors']['mae'],
-        'time': cpi_time
-    }
+    try:
+        start_time = time.time()
+        cpi_result = rf_fe_func(Y, nprev, indice=1, lag=lag)
+        cpi_time = time.time() - start_time
+        
+        results['CPI'] = {
+            'rmse': cpi_result['errors']['rmse'],
+            'mae': cpi_result['errors']['mae'],
+            'time': cpi_time
+        }
+        print(f"    CPI RMSE: {cpi_result['errors']['rmse']:.6f} ({cpi_time:.1f}s)")
+    except Exception as e:
+        print(f"    CPI Error: {e}")
+        results['CPI'] = {'rmse': np.nan, 'mae': np.nan, 'time': 0}
     
     # PCE (indice=2)
-    print(f"\n--- PCE Forecasting (indice=2) ---")
-    start_time = time.time()
-    pce_result = rf_fe_func(Y, nprev, indice=2, lag=lag)
-    pce_time = time.time() - start_time
-    
-    print(f"  Completed in {pce_time:.1f} seconds")
-    print(f"  RMSE: {pce_result['errors']['rmse']:.6f}")
-    print(f"  MAE:  {pce_result['errors']['mae']:.6f}")
-    
-    results['PCE'] = {
-        'pred': pce_result['pred'],
-        'actual': pce_result['actuals'],
-        'rmse': pce_result['errors']['rmse'],
-        'mae': pce_result['errors']['mae'],
-        'time': pce_time
-    }
-    
-    results['total_time'] = cpi_time + pce_time
+    try:
+        start_time = time.time()
+        pce_result = rf_fe_func(Y, nprev, indice=2, lag=lag)
+        pce_time = time.time() - start_time
+        
+        results['PCE'] = {
+            'rmse': pce_result['errors']['rmse'],
+            'mae': pce_result['errors']['mae'],
+            'time': pce_time
+        }
+        print(f"    PCE RMSE: {pce_result['errors']['rmse']:.6f} ({pce_time:.1f}s)")
+    except Exception as e:
+        print(f"    PCE Error: {e}")
+        results['PCE'] = {'rmse': np.nan, 'mae': np.nan, 'time': 0}
     
     return results
 
 
-def generate_results_table(first_results, second_results):
-    """Generate results comparison table."""
-    data = {
-        'Sample': ['First Sample', 'First Sample', 'Second Sample', 'Second Sample'],
-        'Target': ['CPI', 'PCE', 'CPI', 'PCE'],
-        'RMSE': [
-            first_results['CPI']['rmse'],
-            first_results['PCE']['rmse'],
-            second_results['CPI']['rmse'],
-            second_results['PCE']['rmse']
-        ],
-        'MAE': [
-            first_results['CPI']['mae'],
-            first_results['PCE']['mae'],
-            second_results['CPI']['mae'],
-            second_results['PCE']['mae']
-        ],
-        'Time (s)': [
-            first_results['CPI']['time'],
-            first_results['PCE']['time'],
-            second_results['CPI']['time'],
-            second_results['PCE']['time']
-        ]
-    }
+def run_all_periods(periods=None):
+    """
+    Run RF-FE for all specified periods.
     
-    df = pd.DataFrame(data)
-    return df
-
-
-def save_results(first_results, second_results, output_dir):
-    """Save results to CSV files."""
+    Parameters:
+    -----------
+    periods : list, optional
+        List of period names. If None, run all periods.
+        
+    Returns:
+    --------
+    pd.DataFrame : Summary results
+    """
+    if periods is None:
+        periods = list(SAMPLE_PERIODS.keys())
+    
+    print_header(periods)
+    
+    all_results = []
+    total_start = time.time()
+    
+    for period in periods:
+        print(f"\n{'='*60}")
+        print(f"PERIOD: {period} - {SAMPLE_PERIODS[period]['description']}")
+        print(f"{'='*60}")
+        
+        # First sample
+        first_results = run_rf_fe_for_period(period, 'first_sample', rf_fe_first)
+        if first_results:
+            all_results.append({
+                'Period': period,
+                'Sample': 'first_sample',
+                'CPI_RMSE': first_results['CPI']['rmse'],
+                'PCE_RMSE': first_results['PCE']['rmse'],
+                'CPI_Time': first_results['CPI']['time'],
+                'PCE_Time': first_results['PCE']['time']
+            })
+        
+        # Second sample
+        second_results = run_rf_fe_for_period(period, 'second_sample', rf_fe_second)
+        if second_results:
+            all_results.append({
+                'Period': period,
+                'Sample': 'second_sample',
+                'CPI_RMSE': second_results['CPI']['rmse'],
+                'PCE_RMSE': second_results['PCE']['rmse'],
+                'CPI_Time': second_results['CPI']['time'],
+                'PCE_Time': second_results['PCE']['time']
+            })
+    
+    # Create summary DataFrame
+    results_df = pd.DataFrame(all_results)
+    
+    total_time = time.time() - total_start
+    
+    print("\n" + "=" * 70)
+    print("FINAL RESULTS SUMMARY - RF-FE (12-month horizon)")
+    print("=" * 70)
+    print("\n" + results_df.to_string(index=False))
+    
+    # Save results
+    output_dir = os.path.join(PROJECT_ROOT, 'rf_fe_results')
     os.makedirs(output_dir, exist_ok=True)
     
-    # Save summary table
-    summary_df = generate_results_table(first_results, second_results)
-    summary_df.to_csv(os.path.join(output_dir, 'rf_fe_summary.csv'), index=False)
+    results_path = os.path.join(output_dir, 'rf_fe_all_periods_summary.csv')
+    results_df.to_csv(results_path, index=False)
+    print(f"\n✓ Results saved to: {results_path}")
     
-    # Save predictions for first sample
-    first_pred_df = pd.DataFrame({
-        'CPI_Actual': first_results['CPI']['actual'],
-        'CPI_Predicted': first_results['CPI']['pred'],
-        'PCE_Actual': first_results['PCE']['actual'],
-        'PCE_Predicted': first_results['PCE']['pred']
-    })
-    first_pred_df.to_csv(os.path.join(output_dir, 'rf_fe_first_sample_predictions.csv'), index=False)
+    print(f"\n⏱️  Total execution time: {total_time/60:.1f} minutes")
+    print("\n" + "=" * 70)
+    print("RF-FE COMPARISON COMPLETE!")
+    print("=" * 70)
     
-    # Save predictions for second sample
-    second_pred_df = pd.DataFrame({
-        'CPI_Actual': second_results['CPI']['actual'],
-        'CPI_Predicted': second_results['CPI']['pred'],
-        'PCE_Actual': second_results['PCE']['actual'],
-        'PCE_Predicted': second_results['PCE']['pred']
-    })
-    second_pred_df.to_csv(os.path.join(output_dir, 'rf_fe_second_sample_predictions.csv'), index=False)
-    
-    print(f"\n✓ Results saved to {output_dir}/")
+    return results_df
 
 
 def main():
-    """Main function to run RF-FE comparison."""
-    total_start = time.time()
+    """Main function with argument parsing."""
+    parser = argparse.ArgumentParser(description='Run RF-FE for sample periods')
+    parser.add_argument('period', nargs='?', default=None,
+                       help='Specific period to run (or all if not specified)')
+    parser.add_argument('--list', action='store_true',
+                       help='List available periods')
     
-    print_header()
+    args = parser.parse_args()
     
-    # ==========================================================================
-    # Load Data
-    # ==========================================================================
-    print("\n" + "="*60)
-    print("LOADING DATA")
-    print("="*60)
+    if args.list:
+        print("\nAvailable periods:")
+        for name, info in SAMPLE_PERIODS.items():
+            print(f"  {name}: {info['description']} (nprev={info['nprev']})")
+        return
     
-    first_sample_path = os.path.join(PROJECT_ROOT, 'first_sample', 'rawdata_1990_2022.csv')
-    second_sample_path = os.path.join(PROJECT_ROOT, 'second_sample', 'rawdata_1990_2022.csv')
+    if args.period:
+        if args.period not in SAMPLE_PERIODS:
+            print(f"Error: Unknown period '{args.period}'")
+            print(f"Valid periods: {list(SAMPLE_PERIODS.keys())}")
+            return
+        periods = [args.period]
+    else:
+        periods = None  # Run all
     
-    Y_first = load_csv(first_sample_path)
-    Y_second = load_csv(second_sample_path)
-    
-    print(f"\nFirst Sample:")
-    print(f"  Path: {first_sample_path}")
-    print(f"  Shape: {Y_first.shape}")
-    
-    print(f"\nSecond Sample:")
-    print(f"  Path: {second_sample_path}")
-    print(f"  Shape: {Y_second.shape}")
-    
-    # Define nprev (out-of-sample periods)
-    nprev_first = 132   # Standard for first sample
-    nprev_second = 298  # Standard for second sample
-    
-    # ==========================================================================
-    # Run RF-FE for First Sample
-    # ==========================================================================
-    first_results = run_rf_fe_for_sample(
-        Y_first, nprev_first, "First Sample", rf_fe_first
-    )
-    
-    # ==========================================================================
-    # Run RF-FE for Second Sample
-    # ==========================================================================
-    second_results = run_rf_fe_for_sample(
-        Y_second, nprev_second, "Second Sample", rf_fe_second
-    )
-    
-    # ==========================================================================
-    # Results Summary
-    # ==========================================================================
-    total_time = time.time() - total_start
-    
-    print("\n" + "="*70)
-    print("FINAL RESULTS SUMMARY - RF-FE (12-month horizon)")
-    print("="*70)
-    
-    # Generate and display results table
-    results_df = generate_results_table(first_results, second_results)
-    results_df['RMSE'] = results_df['RMSE'].apply(lambda x: f"{x:.6f}")
-    results_df['MAE'] = results_df['MAE'].apply(lambda x: f"{x:.6f}")
-    results_df['Time (s)'] = results_df['Time (s)'].apply(lambda x: f"{x:.1f}")
-    
-    print("\n" + results_df.to_string(index=False))
-    
-    print(f"\n{'='*70}")
-    print("DETAILED COMPARISON")
-    print(f"{'='*70}")
-    
-    print(f"\n📊 First Sample (nprev={nprev_first}):")
-    print(f"   CPI RMSE: {first_results['CPI']['rmse']:.6f}")
-    print(f"   PCE RMSE: {first_results['PCE']['rmse']:.6f}")
-    print(f"   Total Time: {first_results['total_time']:.1f}s")
-    
-    print(f"\n📊 Second Sample (nprev={nprev_second}):")
-    print(f"   CPI RMSE: {second_results['CPI']['rmse']:.6f}")
-    print(f"   PCE RMSE: {second_results['PCE']['rmse']:.6f}")
-    print(f"   Total Time: {second_results['total_time']:.1f}s")
-    
-    # ==========================================================================
-    # Save Results
-    # ==========================================================================
-    output_dir = os.path.join(PROJECT_ROOT, 'rf_fe_results')
-    save_results(first_results, second_results, output_dir)
-    
-    print(f"\n⏱️  Total execution time: {total_time/60:.1f} minutes ({total_time:.1f} seconds)")
-    
-    print("\n" + "="*70)
-    print("RF-FE COMPARISON COMPLETE!")
-    print("="*70)
-    
-    return first_results, second_results
+    results = run_all_periods(periods)
+    return results
 
 
 if __name__ == '__main__':
-    first_results, second_results = main()
+    main()
