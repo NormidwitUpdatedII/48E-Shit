@@ -245,8 +245,8 @@ class FREDMDLoader:
         Parameters:
         -----------
         sample_type : str
-            'first' for first_sample (Jan 2000 - Dec 2020, nprev=132)
-            'second' for second_sample (full period)
+            'first' for without_dummy (periods without 2008 crisis)
+            'second' for with_dummy (periods with 2008 crisis)
             
         Returns:
         --------
@@ -354,7 +354,7 @@ def create_aligned_dataset(fred_md_path, target_rows=503, from_end=True):
     fred_md_path : str
         Path to raw FRED-MD CSV
     target_rows : int
-        Number of rows to return (default: 503 to match first_sample)
+        Number of rows to return (default: 503 to match without_dummy)
     from_end : bool
         If True, take last N rows; if False, take first N rows
         

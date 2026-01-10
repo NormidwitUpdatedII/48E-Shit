@@ -133,14 +133,14 @@ def main():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     
     # All function files to process
-    first_sample_functions = [
+    without_dummy_functions = [
         'func_ar.py', 'func_rf.py', 'func_xgb.py', 'func_nn.py', 
         'func_boosting.py', 'func_bag.py', 'func_csr.py', 'func_fact.py',
         'func_tfact.py', 'func_scad.py', 'func_jn.py', 'func_rfols.py',
         'func_adalassorf.py', 'func_polilasso.py', 'func_lasso.py', 'func_lstm.py'
     ]
     
-    second_sample_functions = [
+    with_dummy_functions = [
         'func_ar.py', 'func_rf.py', 'func_xgb.py', 'func_nn.py',
         'func_boosting.py', 'func_bag.py', 'func_csr.py', 'func_fact.py',
         'func_tfact.py', 'func_scad.py', 'func_jn.py', 'func_rfols.py',
@@ -154,18 +154,18 @@ def main():
     
     updated_count = 0
     
-    # Process first_sample
-    print("\n--- First Sample Functions ---")
-    for filename in first_sample_functions:
-        filepath = os.path.join(base_dir, 'first_sample', 'functions', filename)
+    # Process without_dummy
+    print("\n--- Without Dummy Functions ---")
+    for filename in without_dummy_functions:
+        filepath = os.path.join(base_dir, 'without_dummy', 'functions', filename)
         print(f"\n{filename}:", end=" ")
         if process_file(filepath):
             updated_count += 1
     
-    # Process second_sample
-    print("\n\n--- Second Sample Functions ---")
-    for filename in second_sample_functions:
-        filepath = os.path.join(base_dir, 'second_sample', 'functions', filename)
+    # Process with_dummy
+    print("\n\n--- With Dummy Functions ---")
+    for filename in with_dummy_functions:
+        filepath = os.path.join(base_dir, 'with_dummy', 'functions', filename)
         print(f"\n{filename}:", end=" ")
         if process_file(filepath):
             updated_count += 1

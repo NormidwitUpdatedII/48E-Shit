@@ -116,7 +116,7 @@ def generate_all_samples(data_path=None):
     
     results = []
     
-    for sample_dir in ['first_sample', 'second_sample']:
+    for sample_dir in ['without_dummy', 'with_dummy']:
         output_dir = PROJECT_ROOT / sample_dir
         output_dir.mkdir(exist_ok=True)
         
