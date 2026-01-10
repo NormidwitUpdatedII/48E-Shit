@@ -1,5 +1,6 @@
 """
 Random Forest Rolling Window Forecasts
+Estimates RMSE for all horizons h1-h12
 """
 import os
 import sys
@@ -26,13 +27,36 @@ def main():
     np.random.seed(123)
     
     results = {}
+    rmse_cpi = {}
+    rmse_pce = {}
     
-    # Random Forest models
-    print("Running Random Forest models...")
+    # Random Forest models for horizons h1-h12
+    print("=" * 60)
+    print("Random Forest - RMSE by Horizon (h1-h12)")
+    print("=" * 60)
+    
     for lag in range(1, 13):
-        print(f"  RF lag={lag}")
+        print(f"  Running h={lag}...")
         results[f'rf{lag}c'] = rf_rolling_window(Y, nprev, indice=1, lag=lag)
         results[f'rf{lag}p'] = rf_rolling_window(Y, nprev, indice=2, lag=lag)
+        rmse_cpi[lag] = results[f'rf{lag}c']['errors']['rmse']
+        rmse_pce[lag] = results[f'rf{lag}p']['errors']['rmse']
+    
+    # Print RMSE summary by horizon
+    print("\n" + "=" * 60)
+    print("RMSE BY HORIZON")
+    print("=" * 60)
+    print(f"{'Horizon':<10} {'CPI RMSE':<15} {'PCE RMSE':<15}")
+    print("-" * 40)
+    for h in range(1, 13):
+        print(f"h={h:<7} {rmse_cpi[h]:<15.6f} {rmse_pce[h]:<15.6f}")
+    
+    # Print average RMSE
+    avg_cpi = np.mean(list(rmse_cpi.values()))
+    avg_pce = np.mean(list(rmse_pce.values()))
+    print("-" * 40)
+    print(f"{'Average':<10} {avg_cpi:<15.6f} {avg_pce:<15.6f}")
+    print("=" * 60)
     
     # Combine results for CPI (indice=1)
     cpi_rf = np.column_stack([results[f'rf{lag}c']['pred'] for lag in range(1, 13)])
@@ -47,10 +71,20 @@ def main():
     save_forecasts(cpi_rf, os.path.join(FORECAST_DIR, 'rf-cpi.csv'))
     save_forecasts(pce_rf, os.path.join(FORECAST_DIR, 'rf-pce.csv'))
     
-    print(f"Done! Forecasts saved to {FORECAST_DIR}")
+    # Save RMSE summary
+    rmse_df = pd.DataFrame({
+        'Horizon': list(range(1, 13)),
+        'CPI_RMSE': [rmse_cpi[h] for h in range(1, 13)],
+        'PCE_RMSE': [rmse_pce[h] for h in range(1, 13)]
+    })
+    rmse_df.to_csv(os.path.join(FORECAST_DIR, 'rf-rmse.csv'), index=False)
     
-    return results
+    print(f"\nForecasts saved to {FORECAST_DIR}")
+    print(f"RMSE summary saved to {os.path.join(FORECAST_DIR, 'rf-rmse.csv')}")
+    
+    return results, rmse_cpi, rmse_pce
 
 
 if __name__ == '__main__':
     main()
+
