@@ -24,7 +24,7 @@ CURRENT_PERIOD = '1990_2022'  # Change this to run different period
 DATA_PATH = os.path.join(os.path.dirname(SCRIPT_DIR), f'rawdata_{CURRENT_PERIOD}.csv')
 FORECAST_DIR = os.path.join(os.path.dirname(SCRIPT_DIR), 'forecasts')
 
-from with_dummy.functions.func_adalassorf import lasso_rolling_window
+from with_dummy.functions.func_adalassorf import adalasso_rf_rolling_window
 from utils import load_csv, save_forecasts, add_outlier_dummy
 
 def main():
@@ -46,9 +46,8 @@ def main():
         print(f"  Lag {lag}/12...")
         
         # PCE (indice=2) only
-        result_pce = lasso_rolling_window(Y, nprev, indice=2, lag=lag,
-                                          type_='adalasso')
-        pce_results.append(result_pce['predictions'])
+        result_pce = adalasso_rf_rolling_window(Y, nprev, indice=2, lag=lag)
+        pce_results.append(result_pce['pred'])
     
     # Combine results
     pce = np.column_stack(pce_results)
