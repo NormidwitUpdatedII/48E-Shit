@@ -21,38 +21,55 @@ This repository implements state-of-the-art machine learning methods for inflati
 ├── requirements.txt          # Python dependencies
 ├── utils.py                  # Shared utility functions
 ├── fred_md_loader.py         # FRED-MD data loader with transformations
-├── run_rf_fe_hybrid.py       # Optimized hybrid RF-FE model (MAIN MODEL)
-├── run_rf_fe_comparison.py   # Performance comparison script
-├── comprehensive_comparison.py # Comprehensive model comparison
+├── generate_all_samples.py   # Generate data for all 5 sample periods
+├── run_all_models.py         # Master script to run all models
+├── run_rf_fe_hybrid.py       # Optimized hybrid RF-FE model
 ├── feature_engineering/      # Feature engineering module
+│   ├── __init__.py           # Package exports
 │   ├── feature_engineering.py # Core FE transformations
 │   ├── feature_config.py     # FE configuration parameters
 │   ├── feature_utils.py      # FE utility functions
 │   └── prepare_data_fe.py    # Data preparation for FE models
 ├── first_sample/             # First sample period analysis (2000-2025, 502 obs)
-│   ├── rawdata.csv           # Pre-processed FRED-MD data
-│   ├── rawdata_fe.csv        # Feature-engineered data (502×5061)
+│   ├── rawdata.csv           # Original FRED-MD transformed data
+│   ├── rawdata_fe.csv        # Feature-engineered data
+│   ├── rawdata_1990_2000.csv # Period-specific data
+│   ├── rawdata_fe_1990_2000.csv
+│   ├── rawdata_2001_2015.csv
+│   ├── rawdata_fe_2001_2015.csv
+│   ├── rawdata_2016_2022.csv
+│   ├── rawdata_fe_2016_2022.csv
+│   ├── rawdata_2020_2022.csv
+│   ├── rawdata_fe_2020_2022.csv
+│   ├── rawdata_1990_2022.csv
+│   ├── rawdata_fe_1990_2022.csv
 │   ├── functions/            # Model function implementations
 │   │   ├── func_rw.py        # Random Walk (benchmark)
 │   │   ├── func_ar.py        # Autoregressive models
-│   │   ├── func_lasso.py     # LASSO regression
 │   │   ├── func_rf.py        # Random Forest
 │   │   ├── func_xgb.py       # XGBoost
 │   │   ├── func_lstm.py      # LSTM Deep Learning
-│   │   └── ... (21+ models total)
+│   │   └── ... (21+ models)
 │   └── run/                  # Execution scripts
-│       ├── rw.py             # Run Random Walk
-│       ├── ar.py             # Run AR models
 │       ├── rf_fe.py          # Run RF with Feature Engineering
 │       ├── xgb_fe.py         # Run XGBoost with Feature Engineering
 │       ├── lstm_fe.py        # Run LSTM with Feature Engineering
-│       └── ... (all model runners)
-└── second_sample/            # Second sample period analysis (1959-2025, 800 obs)
-    ├── rawdata.csv           # Pre-processed FRED-MD data
-    ├── rawdata_fe.csv        # Feature-engineered data (800×5061)
-    ├── functions/            # Same structure as first_sample
-    └── run/                  # Same structure as first_sample
+│       └── ... (all runners)
+└── second_sample/            # Second sample period (1959-2025, 800 obs)
+    └── ... (same structure)
 ```
+
+## 🔄 Sample Periods
+
+The project supports 5 sample periods for analysis:
+
+| Period | Date Range | Description | nprev |
+|--------|-----------|-------------|-------|
+| 1990_2000 | Jan 1990 - Dec 2000 | Low volatility (Great Moderation) | 60 |
+| 2001_2015 | Jan 2001 - Dec 2015 | Financial crisis and recovery | 84 |
+| 2016_2022 | Jan 2016 - Dec 2022 | COVID-19 and inflation surge | 48 |
+| 2020_2022 | Jan 2020 - Dec 2022 | Pandemic subset | 24 |
+| 1990_2022 | Jan 1990 - Dec 2022 | Full extended sample | 132 |
 
 ## 🔧 Installation
 
